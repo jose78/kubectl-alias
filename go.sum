@@ -1,2 +1,4 @@
 github.com/jose78/go-collections v0.0.0-20241019065928-96b487c772ab h1:iFrNT50hj5dxJnl1yNSXJVFe/pmdP3q28r5rUkvx75I=
 github.com/jose78/go-collections v0.0.0-20241019065928-96b487c772ab/go.mod h1:mYnDSu3PCOPLuGUoD7ZV3vT93uXTaSSiUEz1w40xHPA=
+github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2 h1:zzrxE1FKn5ryBNl9eKOeqQ58Y/Qpo3Q9QNxKHX5uzzQ=
+github.com/xwb1989/sqlparser v0.0.0-20180606152119-120387863bf2/go.mod h1:hzfGeIUDq/j97IG+FhNqkowIyEcD88LrW6fyU3K3WqY=
