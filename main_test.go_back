@@ -1,19 +1,80 @@
 package main
 
 import (
-	"database/sql"
-	"encoding/json"
-	"fmt"
-	_ "github.com/mattn/go-sqlite3" // Import go-sqlite3 library
-	"log"
 	"os"
+	"reflect"
+	"testing"
 )
 
-var (
-	dataK8s string = `
-{
+func Test_selectQuery(t *testing.T) {
+	type args struct {
+		name string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{"retrieve the query", args{name: "ENV_EXIST"}, "data", false},
+		{"retrieve the error", args{name: "NOT_ENV_EXIST"}, "", true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if !tt.wantErr {
+				os.Setenv("K_FCK_"+tt.args.name, tt.want)
+			}
+			got, err := selectQuery(tt.args.name)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("selectQuery() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("selectQuery() = %v, want %v", got, tt.want)
+			}
+			if !tt.wantErr {
+				os.Unsetenv("K_FCK_" + tt.args.name)
+			}
+		})
+	}
+}
 
-"pod": [
+func Test_evaluateQuery(t *testing.T) {
+	type args struct {
+		query string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    sqlContainer
+		wantErr bool
+	}{
+		{name: "Evaluate query", args: args{query: "SELECT id, name as name_user FROM users WHERE id = 10"},
+			want: sqlContainer{sqlFrom: []string{"users"}, sqlWhere: "id = 10", sqlSelect: map[string]string{"id": "id", "NAME":"NAME_USER"}}, wantErr: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := evaluateQuery(tt.args.query)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("evaluateQuery() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("evaluateQuery() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+
+
+
+
+
+var jsonResult := ```
+{
+    "apiVersion": "v1",
+    "items": [
         {
             "apiVersion": "v1",
             "kind": "Pod",
@@ -36,7 +97,7 @@ var (
                         "uid": "cdda94dc-5140-45f0-a2b5-755ef21802de"
                     }
                 ],
-                "resourceVersion": "902116",
+                "resourceVersion": "122066",
                 "uid": "fbea3800-2cf2-4216-b109-ad9fb3192bc9"
             },
             "spec": {
@@ -139,13 +200,13 @@ var (
                     },
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2024-10-30T21:17:51Z",
+                        "lastTransitionTime": "2024-10-23T21:49:16Z",
                         "status": "True",
                         "type": "Ready"
                     },
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2024-10-30T21:17:51Z",
+                        "lastTransitionTime": "2024-10-23T21:49:16Z",
                         "status": "True",
                         "type": "ContainersReady"
                     },
@@ -158,44 +219,121 @@ var (
                 ],
                 "containerStatuses": [
                     {
-                        "containerID": "containerd://f50e463379cbbfd75ed79ad5ad59d99794c7bb9437c3076c1ab257732b1022a5",
+                        "containerID": "containerd://ec6d920c61f05618d85b202b80fd5817d5a9501a1ea465010c75c3a0dd60215d",
                         "image": "docker.io/library/nginx:latest",
                         "imageID": "docker.io/library/nginx@sha256:28402db69fec7c17e179ea87882667f1e054391138f77ffaf0c3eb388efc3ffb",
                         "lastState": {
                             "terminated": {
-                                "containerID": "containerd://ec6d920c61f05618d85b202b80fd5817d5a9501a1ea465010c75c3a0dd60215d",
+                                "containerID": "containerd://cf0d4c05c24ac84012697ddae030960799b02fdce55dbc63624c21107a4221ea",
                                 "exitCode": 255,
-                                "finishedAt": "2024-10-30T21:17:42Z",
+                                "finishedAt": "2024-10-23T21:49:08Z",
                                 "reason": "Unknown",
-                                "startedAt": "2024-10-23T21:49:15Z"
+                                "startedAt": "2024-10-23T09:45:20Z"
                             }
                         },
                         "name": "nginx",
                         "ready": true,
-                        "restartCount": 2,
+                        "restartCount": 1,
                         "started": true,
                         "state": {
                             "running": {
-                                "startedAt": "2024-10-30T21:17:51Z"
+                                "startedAt": "2024-10-23T21:49:15Z"
                             }
                         }
                     }
                 ],
                 "hostIP": "172.18.0.2",
                 "phase": "Running",
-                "podIP": "10.244.0.4",
+                "podIP": "10.244.0.5",
                 "podIPs": [
                     {
-                        "ip": "10.244.0.4"
+                        "ip": "10.244.0.5"
                     }
                 ],
                 "qosClass": "BestEffort",
                 "startTime": "2024-10-23T09:45:18Z"
             }
-        }
-    ],
-
-"deploy":  [
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "creationTimestamp": "2024-10-22T19:44:13Z",
+                "labels": {
+                    "component": "apiserver",
+                    "provider": "kubernetes"
+                },
+                "name": "kubernetes",
+                "namespace": "default",
+                "resourceVersion": "195",
+                "uid": "73353dd8-f950-41e9-b0de-f934cc698f65"
+            },
+            "spec": {
+                "clusterIP": "10.96.0.1",
+                "clusterIPs": [
+                    "10.96.0.1"
+                ],
+                "internalTrafficPolicy": "Cluster",
+                "ipFamilies": [
+                    "IPv4"
+                ],
+                "ipFamilyPolicy": "SingleStack",
+                "ports": [
+                    {
+                        "name": "https",
+                        "port": 443,
+                        "protocol": "TCP",
+                        "targetPort": 6443
+                    }
+                ],
+                "sessionAffinity": "None",
+                "type": "ClusterIP"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        },
+        {
+            "apiVersion": "v1",
+            "kind": "Service",
+            "metadata": {
+                "creationTimestamp": "2024-10-23T21:50:54Z",
+                "labels": {
+                    "app": "test",
+                    "version": "1.0"
+                },
+                "name": "test",
+                "namespace": "default",
+                "resourceVersion": "122206",
+                "uid": "62719fd9-2318-4843-924a-72cb1057e7df"
+            },
+            "spec": {
+                "clusterIP": "10.96.60.100",
+                "clusterIPs": [
+                    "10.96.60.100"
+                ],
+                "internalTrafficPolicy": "Cluster",
+                "ipFamilies": [
+                    "IPv4"
+                ],
+                "ipFamilyPolicy": "SingleStack",
+                "ports": [
+                    {
+                        "port": 8080,
+                        "protocol": "TCP",
+                        "targetPort": 8080
+                    }
+                ],
+                "selector": {
+                    "app": "test"
+                },
+                "sessionAffinity": "None",
+                "type": "ClusterIP"
+            },
+            "status": {
+                "loadBalancer": {}
+            }
+        },
         {
             "apiVersion": "apps/v1",
             "kind": "Deployment",
@@ -287,10 +425,7 @@ var (
                 "replicas": 1,
                 "updatedReplicas": 1
             }
-        }
-    ],
-    
-    "replicationSet": [
+        },
         {
             "apiVersion": "apps/v1",
             "kind": "ReplicaSet",
@@ -440,136 +575,10 @@ var (
                 "replicas": 1
             }
         }
-    ]
-   
-}
-    `
-)
-
-func main() {
-	os.Remove("sqlite-database.db") // I delete the file to avoid duplicated records.
-	// SQLite is a file based database.
-
-	log.Println("Creating sqlite-database.db...")
-	file, err := os.Create("sqlite-database.db") // Create SQLite file
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	file.Close()
-	log.Println("sqlite-database.db created")
-
-	sqliteDatabase, _ := sql.Open("sqlite3", "./sqlite-database.db") // Open the created SQLite File
-	defer sqliteDatabase.Close()                                     // Defer Closing the database
-	createTable(sqliteDatabase)                                      // Create Database Tables
-	insert(sqliteDatabase)
-	sqlSelect := `SELECT 
-    json_extract(p.data, '$.metadata.name') AS pod_name,
-    json_extract(d.data, '$.metadata.name') AS deploy_name
-FROM 
-    pod AS p
-JOIN 
-    deploy AS d ON json_extract(p.data, '$.metadata.labels.app') = json_extract(d.data, '$.metadata.name')
-;`
-
-	dataSelect_1, _ := evaluateSelect(sqliteDatabase, sqlSelect)
-    fmt.Println(dataSelect_1)
-
-}
-
-func evaluateSelect(db *sql.DB, sqlSelect string) ([][]interface{}, error) {
-
-    rows, errSelect := db.Query(sqlSelect)
-    if errSelect != nil {
-        return nil, errSelect
+    ],
+    "kind": "List",
+    "metadata": {
+        "resourceVersion": ""
     }
-    defer rows.Close() // Ensure rows are closed even if errors occur
-
-    columnNames, err := rows.Columns()
-    if err != nil {
-        return nil, fmt.Errorf("failed to get column names: %w", err)
-    }
-
-    var results [][]interface{} // Store results as a slice of slices (interface{})
-
-    // Prepare destination variables for scanning
-    dest := make([]interface{}, len(columnNames))
-    for i, _ := range columnNames {
-        dest[i] = new(interface{}) // Allocate memory for each interface{}
-    }
-
-    for rows.Next() {
-        // Scan row values into destination variables
-        if err := rows.Scan(dest...); err != nil {
-            return nil, fmt.Errorf("failed to scan row: %w", err)
-        }
-
-        // Convert scanned values to desired types if necessary
-        rowValues := make([]interface{}, len(columnNames))
-        for _, val := range dest {
-            dataVal := *val.(*interface{})
-            rowValues = append(rowValues, dataVal)
-        }
-        results = append(results, rowValues) // Append the row values to the results slice
-    }
-    return results, nil
 }
-
-func createTable(db *sql.DB) {
-
-	var k8sObj map[string][]interface{}
-
-	elements := []string{"pod", "deploy", "replicationSet", "secret", "configMap"}
-	errK8s := json.Unmarshal([]byte(dataK8s), &k8sObj)
-	if errK8s != nil {
-		log.Fatal(errK8s)
-	}
-
-	data := `CREATE TABLE %s(
-        id INTEGER PRIMARY KEY,
-        data TEXT NOT NULL
-    );
-`
-	for _, object := range elements {
-		table := fmt.Sprintf(data, object)
-		statement, err := db.Prepare(table)
-		if err != nil {
-			log.Fatal(err.Error())
-		}
-		statement.Exec()
-		log.Printf("%s table created\n", object)
-	}
-}
-
-func insert(db *sql.DB) {
-
-	var k8sObj map[string][]interface{}
-
-	elements := []string{"pod", "deploy", "replicationSet", "secret", "configMap"}
-	errK8s := json.Unmarshal([]byte(dataK8s), &k8sObj)
-	if errK8s != nil {
-		log.Fatal(errK8s)
-	}
-
-	for _, object := range elements {
-
-		elementToIterate := k8sObj[object]
-		for _, value := range elementToIterate {
-
-			valueByte, errK8sObj := json.Marshal(value)
-			if errK8sObj != nil {
-				log.Fatal(errK8sObj)
-			}
-
-			valueStr := fmt.Sprintf("INSERT INTO %s(data) VALUES('%s');", object, string(valueByte))
-			statement, err := db.Prepare(valueStr) // Prepare statement.
-			// This is good to avoid SQL injections
-			if err != nil {
-				log.Fatalln(err.Error())
-			}
-			_, err = statement.Exec()
-			if err != nil {
-				log.Fatalln(err.Error())
-			}
-		}
-	}
-}
+``` 
