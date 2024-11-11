@@ -1,80 +1,5 @@
-package main
-
-import (
-	"os"
-	"reflect"
-	"testing"
-)
-
-func Test_selectQuery(t *testing.T) {
-	type args struct {
-		name string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    string
-		wantErr bool
-	}{
-		{"retrieve the query", args{name: "ENV_EXIST"}, "data", false},
-		{"retrieve the error", args{name: "NOT_ENV_EXIST"}, "", true},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if !tt.wantErr {
-				os.Setenv("K_FCK_"+tt.args.name, tt.want)
-			}
-			got, err := selectQuery(tt.args.name)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("selectQuery() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if got != tt.want {
-				t.Errorf("selectQuery() = %v, want %v", got, tt.want)
-			}
-			if !tt.wantErr {
-				os.Unsetenv("K_FCK_" + tt.args.name)
-			}
-		})
-	}
-}
-
-func Test_evaluateQuery(t *testing.T) {
-	type args struct {
-		query string
-	}
-	tests := []struct {
-		name    string
-		args    args
-		want    sqlContainer
-		wantErr bool
-	}{
-		{name: "Evaluate query", args: args{query: "SELECT id, name as name_user FROM users WHERE id = 10"},
-			want: sqlContainer{sqlFrom: []string{"users"}, sqlWhere: "id = 10", sqlSelect: map[string]string{"id": "id", "NAME":"NAME_USER"}}, wantErr: false},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := evaluateQuery(tt.args.query)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("evaluateQuery() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("evaluateQuery() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-
-
-
-
-
-var jsonResult := ```
 {
-    "apiVersion": "v1",
-    "items": [
+    "pod": [
         {
             "apiVersion": "v1",
             "kind": "Pod",
@@ -97,7 +22,7 @@ var jsonResult := ```
                         "uid": "cdda94dc-5140-45f0-a2b5-755ef21802de"
                     }
                 ],
-                "resourceVersion": "122066",
+                "resourceVersion": "902116",
                 "uid": "fbea3800-2cf2-4216-b109-ad9fb3192bc9"
             },
             "spec": {
@@ -200,13 +125,13 @@ var jsonResult := ```
                     },
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2024-10-23T21:49:16Z",
+                        "lastTransitionTime": "2024-10-30T21:17:51Z",
                         "status": "True",
                         "type": "Ready"
                     },
                     {
                         "lastProbeTime": null,
-                        "lastTransitionTime": "2024-10-23T21:49:16Z",
+                        "lastTransitionTime": "2024-10-30T21:17:51Z",
                         "status": "True",
                         "type": "ContainersReady"
                     },
@@ -219,121 +144,43 @@ var jsonResult := ```
                 ],
                 "containerStatuses": [
                     {
-                        "containerID": "containerd://ec6d920c61f05618d85b202b80fd5817d5a9501a1ea465010c75c3a0dd60215d",
+                        "containerID": "containerd://f50e463379cbbfd75ed79ad5ad59d99794c7bb9437c3076c1ab257732b1022a5",
                         "image": "docker.io/library/nginx:latest",
                         "imageID": "docker.io/library/nginx@sha256:28402db69fec7c17e179ea87882667f1e054391138f77ffaf0c3eb388efc3ffb",
                         "lastState": {
                             "terminated": {
-                                "containerID": "containerd://cf0d4c05c24ac84012697ddae030960799b02fdce55dbc63624c21107a4221ea",
+                                "containerID": "containerd://ec6d920c61f05618d85b202b80fd5817d5a9501a1ea465010c75c3a0dd60215d",
                                 "exitCode": 255,
-                                "finishedAt": "2024-10-23T21:49:08Z",
+                                "finishedAt": "2024-10-30T21:17:42Z",
                                 "reason": "Unknown",
-                                "startedAt": "2024-10-23T09:45:20Z"
+                                "startedAt": "2024-10-23T21:49:15Z"
                             }
                         },
                         "name": "nginx",
                         "ready": true,
-                        "restartCount": 1,
+                        "restartCount": 2,
                         "started": true,
                         "state": {
                             "running": {
-                                "startedAt": "2024-10-23T21:49:15Z"
+                                "startedAt": "2024-10-30T21:17:51Z"
                             }
                         }
                     }
                 ],
                 "hostIP": "172.18.0.2",
                 "phase": "Running",
-                "podIP": "10.244.0.5",
+                "podIP": "10.244.0.4",
                 "podIPs": [
                     {
-                        "ip": "10.244.0.5"
+                        "ip": "10.244.0.4"
                     }
                 ],
                 "qosClass": "BestEffort",
                 "startTime": "2024-10-23T09:45:18Z"
             }
-        },
-        {
-            "apiVersion": "v1",
-            "kind": "Service",
-            "metadata": {
-                "creationTimestamp": "2024-10-22T19:44:13Z",
-                "labels": {
-                    "component": "apiserver",
-                    "provider": "kubernetes"
-                },
-                "name": "kubernetes",
-                "namespace": "default",
-                "resourceVersion": "195",
-                "uid": "73353dd8-f950-41e9-b0de-f934cc698f65"
-            },
-            "spec": {
-                "clusterIP": "10.96.0.1",
-                "clusterIPs": [
-                    "10.96.0.1"
-                ],
-                "internalTrafficPolicy": "Cluster",
-                "ipFamilies": [
-                    "IPv4"
-                ],
-                "ipFamilyPolicy": "SingleStack",
-                "ports": [
-                    {
-                        "name": "https",
-                        "port": 443,
-                        "protocol": "TCP",
-                        "targetPort": 6443
-                    }
-                ],
-                "sessionAffinity": "None",
-                "type": "ClusterIP"
-            },
-            "status": {
-                "loadBalancer": {}
-            }
-        },
-        {
-            "apiVersion": "v1",
-            "kind": "Service",
-            "metadata": {
-                "creationTimestamp": "2024-10-23T21:50:54Z",
-                "labels": {
-                    "app": "test",
-                    "version": "1.0"
-                },
-                "name": "test",
-                "namespace": "default",
-                "resourceVersion": "122206",
-                "uid": "62719fd9-2318-4843-924a-72cb1057e7df"
-            },
-            "spec": {
-                "clusterIP": "10.96.60.100",
-                "clusterIPs": [
-                    "10.96.60.100"
-                ],
-                "internalTrafficPolicy": "Cluster",
-                "ipFamilies": [
-                    "IPv4"
-                ],
-                "ipFamilyPolicy": "SingleStack",
-                "ports": [
-                    {
-                        "port": 8080,
-                        "protocol": "TCP",
-                        "targetPort": 8080
-                    }
-                ],
-                "selector": {
-                    "app": "test"
-                },
-                "sessionAffinity": "None",
-                "type": "ClusterIP"
-            },
-            "status": {
-                "loadBalancer": {}
-            }
-        },
+        }
+    ],
+    "deploy": [
         {
             "apiVersion": "apps/v1",
             "kind": "Deployment",
@@ -425,7 +272,9 @@ var jsonResult := ```
                 "replicas": 1,
                 "updatedReplicas": 1
             }
-        },
+        }
+    ],
+    "replicationSet": [
         {
             "apiVersion": "apps/v1",
             "kind": "ReplicaSet",
@@ -575,10 +424,5 @@ var jsonResult := ```
                 "replicas": 1
             }
         }
-    ],
-    "kind": "List",
-    "metadata": {
-        "resourceVersion": ""
-    }
+    ]
 }
-``` 
