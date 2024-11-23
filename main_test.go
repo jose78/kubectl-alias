@@ -50,7 +50,7 @@ func Test_evaluateQuery(t *testing.T) {
 		wantErr bool
 	}{
 		{name: "Evaluate query", args: args{query: "SELECT id, name as name_user FROM users WHERE id = 10"},
-			want: sqlContainer{sqlFrom: []string{"users"}, sqlWhere: "id = 10", sqlSelect: map[string]string{"id": "id", "NAME":"NAME_USER"}}, wantErr: false},
+			want: sqlContainer{sqlFrom: []string{"users"}, sqlWhere: "id = 10", sqlSelect: map[string]string{"id": "id", "NAME": "NAME_USER"}}, wantErr: false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -65,6 +65,3 @@ func Test_evaluateQuery(t *testing.T) {
 		})
 	}
 }
-
-
-

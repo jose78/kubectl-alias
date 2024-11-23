@@ -48,12 +48,10 @@ JOIN
 	defer os.Remove("sqlite-database.db")
 }
 
-
 // Retrieve list of elements requered from sql
 func k8sGetElements(elements []string) (result map[string][]any, err error) {
 	return
 }
-
 
 // Execute SElect
 func evaluateSelect(db *sql.DB, sqlSelect string) ([][]interface{}, error) {
@@ -93,7 +91,6 @@ func evaluateSelect(db *sql.DB, sqlSelect string) ([][]interface{}, error) {
 	}
 	return results, nil
 }
-
 
 // CReate table
 func createTable(db *sql.DB, table string) {
