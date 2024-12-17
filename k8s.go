@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -15,13 +16,27 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+const (
+	CTE_KUBECONFIG = "KUBECONFIG"
+	CTE_NS = "namespace"
+	CTE_TABLES = "tables"
+)
+
 func (resource defaultResource) retrieveContent(restConf *rest.Config, key string, channel chan<- map[string]string) {
 	dynamicClient, err := dynamic.NewForConfig(restConf)
 	if err != nil {
 		ErrorK8sGeneratingDynamicClient.buildMsgError(err).KO()
 	}
-	resourceList, err := dynamicClient.Resource(resource.GroupVersionResource).Namespace(resource.NameSpace).List(context.TODO(), metav1.ListOptions{})
-	if err != nil{
+
+	var resourceList *unstructured.UnstructuredList
+	var errResource error
+	if resource.NameSpace == ""{
+		resourceList , errResource = dynamicClient.Resource(resource.GroupVersionResource).List(context.TODO(), metav1.ListOptions{})
+	}else {
+		resourceList, errResource = dynamicClient.Resource(resource.GroupVersionResource).Namespace(resource.NameSpace).List(context.TODO(), metav1.ListOptions{})
+	}
+	
+	if errResource != nil {
 		ErrorK8sRestResource.buildMsgError(resource.NameSpace, resource.GroupVersionResource).KO()
 	}
 	if conentBytes, err := json.Marshal(resourceList.Items); err != nil {
@@ -38,15 +53,28 @@ type K8sConf struct {
 	clientConf *kubernetes.Clientset
 }
 
+// retrieveKubeConf discover which is the path of kubeconfig
+func retrieveKubeConf(ctx context.Context) string {
+	path := ctx.Value(CTE_KUBECONFIG)
+	if path != nil && path.(string) != "" {
+		os.Setenv(CTE_KUBECONFIG, path.(string))
+	}
+	kubeconfigPath := os.Getenv(CTE_KUBECONFIG)
+	if kubeconfigPath == "" {
+		kubeconfigPath = clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
+	}
+	return kubeconfigPath
+}
+
 /*
-createConfiguration given a path, generate a K8sconf to store the client and rest configuration. If the path is empty, then will verify the env var KUBECONFIG,
+createConfiguration given a path, generate a K8sconf to store the client and rest configuration. If the path is empty, then will verify the env VAR_varKUBECONFIG
 if is also empty then it will check the default path.
 */
 func createConfiguration(path string) K8sConf {
 	if path != "" {
-		os.Setenv("KUBECONFIG", path)
+		os.Setenv(CTE_KUBECONFIG, path)
 	}
-	kubeconfigPath := os.Getenv("KUBECONFIG")
+	kubeconfigPath := os.Getenv(CTE_KUBECONFIG)
 	if kubeconfigPath == "" {
 		kubeconfigPath = clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
 	}
@@ -100,33 +128,29 @@ type defaultResource struct {
 	NameSpace string
 }
 
-type kubeParams struct {
-	namespace    string
-	k8sObjs      []string
-	kubeconfPath string
-}
-
-func RetrieveK8sObjects(params kubeParams) map[string]string {
-
-	conf := createConfiguration(params.kubeconfPath)
-	mapK8sObject := generateMapObjects(conf.clientConf, params.namespace)
+// retrieveK8sObjects retrieve from k8s ckuster a map of list of componentes deployed
+func retrieveK8sObjects(ctx context.Context) map[string]string {
+	var wg sync.WaitGroup
+	pathK8s := retrieveKubeConf(ctx)
+	conf := createConfiguration(pathK8s)
+	ns := ctx.Value(CTE_NS).(string)
+	tables := ctx.Value(CTE_TABLES).([]string)
+	mapK8sObject := generateMapObjects(conf.clientConf, ns)
 
 	chanResult := make(chan map[string]string)
-	var wg sync.WaitGroup
-	for _, keyObject := range params.k8sObjs {
+	for _, keyObject := range tables {
 		obj, ok := mapK8sObject[keyObject]
 		if !ok {
 			ErrorK8sObjectnotSupported.buildMsgError(keyObject).KO()
 		}
 		wg.Add(1)
-		go obj.retrieveContent(conf.restConf, keyObject, chanResult)
+		go func() {
+			obj.retrieveContent(conf.restConf, keyObject, chanResult)
+			wg.Done()
+		}()
 	}
-
 	wg.Wait()
 	close(chanResult)
-
-	fmt.Println(mapK8sObject)
-
 	result, ok := <-chanResult
 	if ok {
 		fmt.Print("Channep open")
