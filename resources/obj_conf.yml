@@ -1,0 +1,65 @@
+---
+apiVersion: v1
+kind: List
+items:
+  - apiVersion: v1
+    kind: Namespace
+    metadata:
+      name: ns-test
+      labels:
+        environment: dev
+        team: test-team
+
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: test-configmap
+      namespace: ns-test
+    data:
+      app-name: "test-app"
+      log-level: "info"
+      feature-toggle: "true"
+
+  - apiVersion: v1
+    kind: Secret
+    metadata:
+      name: test-secret
+      namespace: ns-test
+    type: Opaque
+    data:
+      username: dGVzdC11c2Vy         # "test-user" en Base64
+      password: dGVzdC1wYXNzd29yZA== # "test-password" en Base64
+
+  - apiVersion: v1
+    kind: ResourceQuota
+    metadata:
+      name: test-resourcequota
+      namespace: ns-test
+    spec:
+      hard:
+        pods: "5"
+        requests.cpu: "2"
+        requests.memory: "8Gi"
+        limits.cpu: "4"
+        limits.memory: "16Gi"
+
+  - apiVersion: v1
+    kind: LimitRange
+    metadata:
+      name: test-limitrange
+      namespace: ns-test
+    spec:
+      limits:
+        - type: Container
+          max:
+            cpu: "1"
+            memory: "512Mi"
+          min:
+            cpu: "100m"
+            memory: "64Mi"
+          default:
+            cpu: "300m"
+            memory: "128Mi"
+          defaultRequest:
+            cpu: "200m"
+            memory: "96Mi"

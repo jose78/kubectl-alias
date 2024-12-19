@@ -9,6 +9,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3" // Import go-sqlite3 library
 	"github.com/xwb1989/sqlparser"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
 // Execute SElect
@@ -68,16 +69,12 @@ func createTable(db *sql.DB, table string) {
 }
 
 // insert list of items of same type in a table
-func insert(db *sql.DB, elementToIterate []any, tbl string) {
+func insert(db *sql.DB, k8sValues []unstructured.Unstructured, tbl string) {
 
-	for _, value := range elementToIterate {
+	for _, value := range k8sValues {
 
-		valueByte, errK8sObj := json.Marshal(value)
-		if errK8sObj != nil {
-			log.Fatal(errK8sObj)
-		}
-
-		valueStr := fmt.Sprintf("INSERT INTO %s(data) VALUES('%s');", tbl, string(valueByte))
+		valueJson, _ := json.Marshal(value)
+		valueStr := fmt.Sprintf("INSERT INTO %s(data) VALUES('%s');", tbl, string(valueJson))
 		statement, err := db.Prepare(valueStr) // Prepare statement.
 		// This is good to avoid SQL injections
 		if err != nil {
@@ -88,9 +85,9 @@ func insert(db *sql.DB, elementToIterate []any, tbl string) {
 			log.Fatalln(err.Error())
 		}
 	}
+
 }
 func evaluateQuery(sqlStr string) ([]string, error) {
-
 	var evaluateFrom func(map[string]any) []string
 	evaluateFrom = func(data map[string]any) []string {
 		result := []string{}

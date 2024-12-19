@@ -29,13 +29,13 @@ func (alias AliasDefV1) execute(ctx context.Context) {
 
 	tables, _ := evaluateQuery(aliasFiltered[0].SQL)
 	ctx = context.WithValue(ctx, CTE_TABLES, tables)
-	retrieveK8sObjects(ctx)
+	dataExtractedK8s :=  retrieveK8sObjects(ctx)
 
+	for table, jsonContent := range dataExtractedK8s{
+		createTable(sqliteDatabase, table)
+		insert(sqliteDatabase,jsonContent , table )
+	}
 	dataSelect_1, _ := evaluateSelect(sqliteDatabase, aliasFiltered[0].SQL)
-
-
-
-
 
 	fmt.Println(dataSelect_1)
 }

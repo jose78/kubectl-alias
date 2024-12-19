@@ -8,3 +8,33 @@ aliases:
        SELECT  json_extract(p.data, '$.metadata.name') AS pod_name, json_extract(d.data, '$.metadata.name') AS deploy_name  
        FROM  pod AS p , deploy AS d
        WHERE json_extract(p.data, '$.metadata.labels.app') = json_extract(d.data, '$.metadata.name') ;"
+  - name: ns
+    sql: |
+        SELECT *
+        FROM 
+            namespaces
+  - name: conf
+    sql: |
+        SELECT
+            json_extract(ns, '$metadata.name') AS namespace_name,
+            json_extract(cm, '$metadata.name') AS configmap_name,
+            json_extract(s, '$metadata.name') AS secret_name,
+            json_extract(rq, '$metadata.name') AS resourcequota_name,
+            json_extract(lr, '$metadata.name') AS limitrange_name,
+            json_extract( cm, '$data')  AS configmap_data,
+            json_extract( s, '$data')  AS secret_data,
+            json_extract( rq, '$spec.hard')  AS resourcequota_hard_limits,
+            json_extract( lr, '$spec.limits')  AS limitrange_limits
+        FROM 
+            namespaces ns
+        LEFT JOIN 
+            configmaps cm ON json_extract(ns, '$metadata.name') = json_extract(cm, '$metadata.namespace')
+        LEFT JOIN 
+            secrets s ON json_extract(ns, '$metadata.name') = json_extract(s, '$metadata.namespace')
+        LEFT JOIN 
+            resourcequotas rq ON json_extract(ns, '$metadata.name') = json_extract(rq, '$metadata.namespace')
+        LEFT JOIN 
+            limitranges lr ON json_extract(ns, '$metadata.name') = json_extract(lr, '$metadata.namespace')
+        WHERE 
+            json_extract(ns, '$metadata.name') = 'ns-test';
+         

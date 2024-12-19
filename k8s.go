@@ -2,10 +2,7 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"os"
-	"sync"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -18,11 +15,11 @@ import (
 
 const (
 	CTE_KUBECONFIG = "KUBECONFIG"
-	CTE_NS = "namespace"
-	CTE_TABLES = "tables"
+	CTE_NS         = "namespace"
+	CTE_TABLES     = "tables"
 )
 
-func (resource defaultResource) retrieveContent(restConf *rest.Config, key string, channel chan<- map[string]string) {
+func (resource defaultResource) retrieveContent(restConf *rest.Config, key string) []unstructured.Unstructured {
 	dynamicClient, err := dynamic.NewForConfig(restConf)
 	if err != nil {
 		ErrorK8sGeneratingDynamicClient.buildMsgError(err).KO()
@@ -30,22 +27,16 @@ func (resource defaultResource) retrieveContent(restConf *rest.Config, key strin
 
 	var resourceList *unstructured.UnstructuredList
 	var errResource error
-	if resource.NameSpace == ""{
-		resourceList , errResource = dynamicClient.Resource(resource.GroupVersionResource).List(context.TODO(), metav1.ListOptions{})
-	}else {
+	if resource.NameSpace == "" {
+		resourceList, errResource = dynamicClient.Resource(resource.GroupVersionResource).List(context.TODO(), metav1.ListOptions{})
+	} else {
 		resourceList, errResource = dynamicClient.Resource(resource.GroupVersionResource).Namespace(resource.NameSpace).List(context.TODO(), metav1.ListOptions{})
 	}
-	
+
 	if errResource != nil {
 		ErrorK8sRestResource.buildMsgError(resource.NameSpace, resource.GroupVersionResource).KO()
 	}
-	if conentBytes, err := json.Marshal(resourceList.Items); err != nil {
-		ErrorJsonMarshallResourceList.buildMsgError(key).KO()
-	} else {
-		channel <- map[string]string{
-			key: string(conentBytes),
-		}
-	}
+	return  resourceList.Items
 }
 
 type K8sConf struct {
@@ -129,34 +120,22 @@ type defaultResource struct {
 }
 
 // retrieveK8sObjects retrieve from k8s ckuster a map of list of componentes deployed
-func retrieveK8sObjects(ctx context.Context) map[string]string {
-	var wg sync.WaitGroup
+func retrieveK8sObjects(ctx context.Context) map[string][]unstructured.Unstructured {
 	pathK8s := retrieveKubeConf(ctx)
 	conf := createConfiguration(pathK8s)
 	ns := ctx.Value(CTE_NS).(string)
 	tables := ctx.Value(CTE_TABLES).([]string)
 	mapK8sObject := generateMapObjects(conf.clientConf, ns)
-
-	chanResult := make(chan map[string]string)
+	result := map[string][]unstructured.Unstructured{}
 	for _, keyObject := range tables {
 		obj, ok := mapK8sObject[keyObject]
 		if !ok {
 			ErrorK8sObjectnotSupported.buildMsgError(keyObject).KO()
 		}
-		wg.Add(1)
-		go func() {
-			obj.retrieveContent(conf.restConf, keyObject, chanResult)
-			wg.Done()
-		}()
+		func(conf K8sConf, table string) {
+			k8sObjs := obj.retrieveContent(conf.restConf, table)
+			result[table] = k8sObjs 
+		}(conf, keyObject)
 	}
-	wg.Wait()
-	close(chanResult)
-	result, ok := <-chanResult
-	if ok {
-		fmt.Print("Channep open")
-	} else {
-		fmt.Println(" Clannel closed")
-	}
-
 	return result
 }
