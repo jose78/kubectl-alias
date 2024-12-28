@@ -37,7 +37,7 @@ func init() {
 
 func destroy(){
 	sqliteDatabase.Close()
-	os.Remove("sqlite-database.db")
+	os.Remove("./sqlite-database.db")
 }
 
 func main() {

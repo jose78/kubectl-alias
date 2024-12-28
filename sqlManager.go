@@ -91,17 +91,13 @@ func evaluateQuery(sqlStr string) ([]string, error) {
 	var evaluateFrom func(map[string]any) []string
 	evaluateFrom = func(data map[string]any) []string {
 		result := []string{}
-		for _, value := range data {
-			if value != nil {
-				kind := reflect.TypeOf(value).Kind()
-				if kind == reflect.Map {
-					if item, ok := value.(map[string]any)["Expr"]; ok {
-						table := item.(map[string]any)["Name"].(string)
-						result = append(result, table)
-					} else if value != "Condition" {
-						result = append(result, evaluateFrom(value.(map[string]any))...)
-					}
-				}
+		for key, value := range data {
+			fmt.Println("key: ", key)
+			if key == "Expr"{
+				table := value.(map[string]any)["Name"].(string)
+				result = append(result, table)
+			} else if value != nil &&  reflect.TypeOf(value).Kind()  == reflect.Map {
+				result = append(result, evaluateFrom(value.(map[string]any))...)
 			}
 		}
 		return result

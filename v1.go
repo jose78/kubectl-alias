@@ -31,6 +31,7 @@ func (alias AliasDefV1) execute(ctx context.Context) {
 	ctx = context.WithValue(ctx, CTE_TABLES, tables)
 	dataExtractedK8s :=  retrieveK8sObjects(ctx)
 
+	
 	for table, jsonContent := range dataExtractedK8s{
 		createTable(sqliteDatabase, table)
 		insert(sqliteDatabase,jsonContent , table )
