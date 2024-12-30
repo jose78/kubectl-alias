@@ -12,54 +12,60 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
+type row map[string] any 
+type selectResult struct{
+	columns []string
+	rows map[int]row
+}
+
 // Execute SElect
-func evaluateSelect(db *sql.DB, sqlSelect string) ([][]interface{}, error) {
+func evaluateSelect(db *sql.DB, sqlSelect string) (selectResult) {
 
 	rows, errSelect := db.Query(sqlSelect)
 	if errSelect != nil {
-		return nil, errSelect
+		ErrorSqlRuningSelect.buildMsgError(sqlSelect, errSelect).KO()
 	}
 	defer rows.Close() // Ensure rows are closed even if errors occur
-
-	columnNames, err := rows.Columns()
+	columns, err := rows.Columns()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get column names: %w", err)
+		ErrorSqlReadingColumns.buildMsgError(err).KO()
 	}
-
-	var results [][]interface{} // Store results as a slice of slices (interface{})
-
-	// Prepare destination variables for scanning
-	dest := make([]interface{}, len(columnNames))
-	for i, _ := range columnNames {
-		dest[i] = new(interface{}) // Allocate memory for each interface{}
-	}
-
+	results :=  selectResult{columns: columns, rows: map[int]row{}}
+	index := 0
 	for rows.Next() {
-		// Scan row values into destination variables
-		if err := rows.Scan(dest...); err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+		values := make([]interface{}, len(columns))
+		valuePtrs := make([]interface{}, len(columns))
+		for i := range values {
+			valuePtrs[i] = &values[i]
 		}
-
-		// Convert scanned values to desired types if necessary
-		rowValues := make([]interface{}, len(columnNames))
-		for _, val := range dest {
-			dataVal := *val.(*interface{})
-			rowValues = append(rowValues, dataVal)
+		if err := rows.Scan(valuePtrs...); err != nil {
+			ErrorSqlScaningResultSelect.buildMsgError(err).KO()
 		}
-		results = append(results, rowValues) // Append the row values to the results slice
+		row := row{}
+		for i, col := range columns {
+			var v interface{}
+			if b, ok := values[i].([]byte); ok {
+				v = string(b) // Convertir []byte a string
+			} else {
+				v = values[i]
+			}
+			row[col] = v
+		}
+		results.rows[index] = row
+		index++
 	}
-	return results, nil
+	return results
 }
 
 // CReate table
 func createTable(db *sql.DB, table string) {
 
-	data := `CREATE TABLE %s(
+	data := `CREATE TABLE %s (
         id INTEGER PRIMARY KEY,
-        data TEXT NOT NULL
+        %s TEXT NOT NULL
     );
 `
-	createTable := fmt.Sprintf(data, table)
+	createTable := fmt.Sprintf(data, table, table)
 	statement, err := db.Prepare(createTable)
 	if err != nil {
 		log.Fatal(err.Error())
@@ -74,7 +80,7 @@ func insert(db *sql.DB, k8sValues []unstructured.Unstructured, tbl string) {
 	for _, value := range k8sValues {
 
 		valueJson, _ := json.Marshal(value)
-		valueStr := fmt.Sprintf("INSERT INTO %s(data) VALUES('%s');", tbl, string(valueJson))
+		valueStr := fmt.Sprintf("INSERT INTO %s(%s) VALUES('%s');", tbl,tbl,  string(valueJson))
 		statement, err := db.Prepare(valueStr) // Prepare statement.
 		// This is good to avoid SQL injections
 		if err != nil {

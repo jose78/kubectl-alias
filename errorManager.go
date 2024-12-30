@@ -25,6 +25,9 @@ const (
 	ErrorKubeAliasVersionNotFoud
 	ErrorKubeAliasNotFoud
 	ErrorKubeAliasDuplicated
+	ErrorSqlRuningSelect
+	ErrorSqlReadingColumns
+	ErrorSqlScaningResultSelect
 )
 
 func (k8s errorManager) buildMsgError(params ...any) ErrorSystem {
@@ -54,7 +57,13 @@ func (k8s errorManager) buildMsgError(params ...any) ErrorSystem {
 	case ErrorKubeAliasVersionNotFoud:
 		errorSystem = ErrorSystem{6, fmt.Sprintf("the version tag not found")}
 	case ErrorKubeAliasNotFoud:
-		errorSystem = ErrorSystem{6, fmt.Sprintf("the alias %s is not defined within the alias file")}
+		errorSystem = ErrorSystem{6, fmt.Sprintf("the alias %s is not defined within the alias file", params[0])}
+	case ErrorSqlRuningSelect:
+		errorSystem = ErrorSystem{6, fmt.Sprintf(`failed executing SQL:" %s". Details:%w`, params[0], params[1])}
+	case ErrorSqlReadingColumns:
+		errorSystem = ErrorSystem{6, fmt.Sprintf("the alias %s is not defined within the alias file", params[0])}
+	case ErrorSqlScaningResultSelect: 
+		errorSystem = ErrorSystem{6, fmt.Sprintf("failed to scan row: %w")}
 	}
 
 	errorSystem.errorMsg = fmt.Sprintf("error msg: %s\nerror code: %d", errorSystem.errorMsg, errorSystem.errorCode)

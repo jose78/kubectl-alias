@@ -36,7 +36,7 @@ func (alias AliasDefV1) execute(ctx context.Context) {
 		createTable(sqliteDatabase, table)
 		insert(sqliteDatabase,jsonContent , table )
 	}
-	dataSelect_1, _ := evaluateSelect(sqliteDatabase, aliasFiltered[0].SQL)
+	dataSelect_1 := evaluateSelect(sqliteDatabase, aliasFiltered[0].SQL)
 
 	fmt.Println(dataSelect_1)
 }
