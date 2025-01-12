@@ -16,7 +16,7 @@ import (
 const (
 	CTE_KUBECONFIG = "KUBECONFIG"
 	CTE_NS         = "namespace"
-	CTE_TABLES     = "tables"
+	CTE_TABLE      = "tables"
 )
 
 func (resource defaultResource) retrieveContent(restConf *rest.Config, key string) []unstructured.Unstructured {
@@ -36,7 +36,7 @@ func (resource defaultResource) retrieveContent(restConf *rest.Config, key strin
 	if errResource != nil {
 		ErrorK8sRestResource.buildMsgError(resource.NameSpace, resource.GroupVersionResource).KO()
 	}
-	return  resourceList.Items
+	return resourceList.Items
 }
 
 type K8sConf struct {
@@ -120,22 +120,22 @@ type defaultResource struct {
 }
 
 // retrieveK8sObjects retrieve from k8s ckuster a map of list of componentes deployed
-func retrieveK8sObjects(ctx context.Context) map[string][]unstructured.Unstructured {
+func retrieveK8sObjects(ctx context.Context) []unstructured.Unstructured {
 	pathK8s := retrieveKubeConf(ctx)
 	conf := createConfiguration(pathK8s)
 	ns := ctx.Value(CTE_NS).(string)
-	tables := ctx.Value(CTE_TABLES).([]string)
+	table := ctx.Value(CTE_TABLE).(string)
 	mapK8sObject := generateMapObjects(conf.clientConf, ns)
-	result := map[string][]unstructured.Unstructured{}
-	for _, keyObject := range tables {
-		obj, ok := mapK8sObject[keyObject]
+	result := []unstructured.Unstructured{}
+	
+		obj, ok := mapK8sObject[table]
 		if !ok {
-			ErrorK8sObjectnotSupported.buildMsgError(keyObject).KO()
+			ErrorK8sObjectnotSupported.buildMsgError(table).KO()
 		}
 		func(conf K8sConf, table string) {
 			k8sObjs := obj.retrieveContent(conf.restConf, table)
-			result[table] = k8sObjs 
-		}(conf, keyObject)
-	}
+			result = k8sObjs
+		}(conf, table)
+	
 	return result
 }
