@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+	"strings"
 
 	"github.com/jose78/sqlparser"
 	_ "github.com/mattn/go-sqlite3" // Import go-sqlite3 library
@@ -127,6 +128,7 @@ func evaluateQuery(sqlStr string) ([]string, error) {
 }
 
 func findTablesWithAliases(query string) map[string]string {
+	query = strings.ReplaceAll(query, ".", "____")
 	// Parsear la consulta a un AST
 	stmt, _ := sqlparser.Parse(query)
 	selectStmt, ok := stmt.(*sqlparser.Select)
@@ -153,8 +155,34 @@ func findTablesWithAliases(query string) map[string]string {
 	return aliasToTable
 }
 
+type colInfo struct {
+	columnName string
+	tableName string
+}
+
+func regenerateColInfo(col string, aliasToTable map[string]string ) colInfo{
+
+	colSplited := strings.Split(col, "____")
+	qualifier := ""
+	if len(aliasToTable) != 1 {
+		qualifier = colSplited[0]
+	}else{
+		for _, value := range aliasToTable{
+			qualifier = value
+			break
+		}
+	}
+	name := strings.Join(colSplited[1:],".")
+
+	tableName := aliasToTable[qualifier]
+	columnName := fmt.Sprintf(`"$.Object.%s"`, name)
+
+	return colInfo{columnName, tableName}
+}
+
 func updateAST(query string,aliasToTable map[string]string) string {
 
+	query = strings.ReplaceAll(query, ".", "____")
 	// Parsear la consulta a un AST
 	stmt, _ := sqlparser.Parse(query)
 
@@ -170,9 +198,9 @@ func updateAST(query string,aliasToTable map[string]string) string {
 				continue
 			}
 
-			tableAlias := colName.Qualifier.Qualifier.String()
-			tableName := aliasToTable[tableAlias]
-			columnName := fmt.Sprintf(`"$.Object.%s"`, colName.Name.String())
+			col := regenerateColInfo(colName.Name.String(), aliasToTable)
+			tableName := col.tableName
+			columnName := col.columnName
 
 			aliasedExpr.Expr = &sqlparser.FuncExpr{
 				Name: sqlparser.NewColIdent("json_extract"),
@@ -199,9 +227,9 @@ func updateAST(query string,aliasToTable map[string]string) string {
 
 			colName, _ := (*binaryExpr).(*sqlparser.ColName)
 
-			tableAlias := colName.Qualifier.Qualifier.String()
-			tableName := aliasToTable[tableAlias]
-			columnName := fmt.Sprintf(`"$.Object.%s"`, colName.Name.String())
+			col := regenerateColInfo(colName.Name.String(), aliasToTable)
+			tableName := col.tableName
+			columnName := col.columnName
 
 			*binaryExpr = &sqlparser.FuncExpr{
 				Name: sqlparser.NewColIdent("json_extract"),
@@ -244,9 +272,9 @@ func updateAST(query string,aliasToTable map[string]string) string {
 				continue
 			}
 
-			tableAlias := colName.Qualifier.Qualifier.String()
-			tableName := aliasToTable[tableAlias]
-			columnName := fmt.Sprintf(`"$.Object.%s"`, colName.Name.String())
+			col := regenerateColInfo(colName.Name.String(), aliasToTable)
+			tableName := col.tableName
+			columnName := col.columnName
 
 			selectStmt.GroupBy[i] = &sqlparser.FuncExpr{
 				Name: sqlparser.NewColIdent("json_extract"),
@@ -269,9 +297,9 @@ func updateAST(query string,aliasToTable map[string]string) string {
 				continue
 			}
 
-			tableAlias := colName.Qualifier.Qualifier.String()
-			tableName := aliasToTable[tableAlias]
-			columnName := fmt.Sprintf(`"$.Object.%s"`, colName.Name.String())
+			col := regenerateColInfo(colName.Name.String(), aliasToTable)
+			tableName := col.tableName
+			columnName := col.columnName
 
 			selectStmt.OrderBy[i].Expr = &sqlparser.FuncExpr{
 				Name: sqlparser.NewColIdent("json_extract"),
