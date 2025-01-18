@@ -1,7 +1,6 @@
 package main
 
 import (
-
 	"testing"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -24,9 +23,9 @@ func Test_manipulateSElect(t *testing.T) {
 		args args
 		want string
 	}{
-		{"Update a Query with Join", args{real_query}, "select json_extract(ns, `\"$.Object.metadata.perconte.name\"`) as ns_name, json_extract(pod, `\"$.Object.metadata.name\"`) as pod_name from ns, pod as p where json_extract(ns, `\"$.Object.metadata.namespace\"`) = json_extract(pod, `\"$.Object.metadata.name\"`)"},
 		{"Update a Query with Join", args{query_join}, "select json_extract(pepe, `\"$.Object.id\"`) as ID, json_extract(pepe, `\"$.Object.name\"`) as user_name from pepe as p, fulgencio as f where json_extract(pepe, `\"$.Object.name\"`) = 'tete' and json_extract(pepe, `\"$.Object.id\"`) = json_extract(fulgencio, `\"$.Object.id\"`)"},
 		{"Update a simple Query", args{query_simple}, "select json_extract(pepe, `\"$.Object.id\"`) as ID, json_extract(pepe, `\"$.Object.name\"`) as user_name from pepe as p where json_extract(pepe, `\"$.Object.name\"`) = 'tete'"},
+		{"Update a Query with Join", args{real_query}, "select json_extract(ns, `\"$.Object.metadata.perconte.name\"`) as ns_name, json_extract(pod, `\"$.Object.metadata.name\"`) as pod_name from ns, pod as p where json_extract(ns, `\"$.Object.metadata.namespace\"`) = json_extract(pod, `\"$.Object.metadata.name\"`)"},
 		{"Update a Query with order by", args{query_order_by}, "select json_extract(pepe, `\"$.Object.id\"`) as ID, json_extract(pepe, `\"$.Object.name\"`) as user_name from pepe as p where json_extract(pepe, `\"$.Object.name\"`) = 'tete' order by json_extract(pepe, `\"$.Object.name\"`) desc"},
 		{"Update a Query with group by", args{query_group_by}, "select json_extract(pepe, `\"$.Object.id\"`) as ID, json_extract(pepe, `\"$.Object.name\"`) as user_name from pepe as p where json_extract(pepe, `\"$.Object.name\"`) = 'tete' group by json_extract(pepe, `\"$.Object.type\"`)"},
 		{"Update a complex Query", args{query_group_by_and_order_by}, "select json_extract(pepe, `\"$.Object.id\"`) as ID, json_extract(pepe, `\"$.Object.name\"`) as user_name from pepe as p where json_extract(pepe, `\"$.Object.name\"`) = 'tete' group by json_extract(pepe, `\"$.Object.type\"`) order by json_extract(pepe, `\"$.Object.name\"`) desc"},
@@ -34,7 +33,7 @@ func Test_manipulateSElect(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mapTables := findTablesWithAliases(tt.args.query)
-			got := updateAST(tt.args.query, mapTables)
+			got := updateQuery(tt.args.query, mapTables)
 			if got != tt.want {
 				t.Errorf("manipulateSElect() = %v, want %v", got, tt.want)
 			}

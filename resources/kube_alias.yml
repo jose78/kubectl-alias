@@ -2,41 +2,8 @@
 version: v1
 aliases:
   - name: ns
-    sql: "SELECT ns.metadata.name AS ns_name,  p.metadata.name AS pod_name FROM ns, pod AS p WHERE  ns.metadata.namespace = p.metadata.name;" 
-  - name: deploy
-    sql: "SELECT     json_extract(p.data, '$.Object.metadata.name') AS pod_name, json_extract(d.data, '$.Object.metadata.name') AS deploy_name  FROM  pod AS p JOIN  deploy AS d ON json_extract(p.data, '$.Object.metadata.labels.app') = json_extract(d.data, '$.Object.metadata.name') ;"
-  - name: deployMod
     sql: |
-       SELECT  json_extract(p.data, '$.Object.metadata.name') AS pod_name, json_extract(d.data, '$.Object.metadata.name') AS deploy_name  
-       FROM  pod AS p , deploy AS d
-       WHERE json_extract(p.data, '$.Object.metadata.labels.app') = json_extract(d.data, '$.Object.metadata.name') ;"
-  - name: ns-2
-    sql: |
-        SELECT json_extract(ns, '$.Object.Object.metadata.name') as name_ns 
+        SELECT p.metadata.name as name_pod, s.metadata.name as name_svc
         FROM 
-            ns 
-  - name: conf
-    sql: |
-        SELECT
-            json_extract(ns, '$.Object.metadata.name') AS namespace_name,
-            json_extract(cm, '$.Object.metadata.name') AS configmap_name,
-            json_extract(s, '$.Object.metadata.name') AS secret_name,
-            json_extract(rq, '$.Object.metadata.name') AS resourcequota_name,
-            json_extract(lr, '$.Object.metadata.name') AS limitrange_name,
-            json_extract( cm, '$data')  AS configmap_data,
-            json_extract( s, '$data')  AS secret_data,
-            json_extract( rq, '$spec.hard')  AS resourcequota_hard_limits,
-            json_extract( lr, '$spec.limits')  AS limitrange_limits
-        FROM 
-            namespaces ns
-        LEFT JOIN 
-            configmaps cm ON json_extract(ns, '$.Object.metadata.name') = json_extract(cm, '$.Object.metadata.namespace')
-        LEFT JOIN 
-            secrets s ON json_extract(ns, '$.Object.metadata.name') = json_extract(s, '$.Object.metadata.namespace')
-        LEFT JOIN 
-            resourcequotas rq ON json_extract(ns, '$.Object.metadata.name') = json_extract(rq, '$.Object.metadata.namespace')
-        LEFT JOIN 
-            limitranges lr ON json_extract(ns, '$.Object.metadata.name') = json_extract(lr, '$.Object.metadata.namespace')
-        WHERE 
-            json_extract(ns, '$.Object.metadata.name') = 'ns-test';
-         
+            pod p, svc s
+        where p.metadata.labels.app = s.spec.selector.app

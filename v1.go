@@ -26,7 +26,7 @@ func (alias AliasDefV1) execute(ctx context.Context) {
 	} else if len(aliasFiltered) > 1 {
 		ErrorKubeAliasDuplicated.buildMsgError(aliasName).KO()
 	}
-	
+
 	aliasToTable := findTablesWithAliases(aliasFiltered[0].SQL)
 	tables := []string{}
 	collections.Map(func(touple collections.Touple) any { return touple.Value }, aliasToTable, &tables)
@@ -36,7 +36,7 @@ func (alias AliasDefV1) execute(ctx context.Context) {
 		createTable(sqliteDatabase, table)
 		insert(sqliteDatabase, jsonContent, table)
 	}
-	sqlSelect := updateAST(aliasFiltered[0].SQL, aliasToTable)
+	sqlSelect := updateQuery(aliasFiltered[0].SQL, aliasToTable)
 	dataSelect_1 := evaluateSelect(sqliteDatabase, sqlSelect)
 
 	fmt.Println(dataSelect_1)

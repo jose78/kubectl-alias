@@ -82,6 +82,7 @@ func insert(db *sql.DB, k8sValues []unstructured.Unstructured, tbl string) {
 
 		valueJson, _ := json.Marshal(value)
 		valueStr := fmt.Sprintf("INSERT INTO %s(%s) VALUES('%s');", tbl, tbl, string(valueJson))
+		log.Printf("Inserted into table %s , %s", tbl, string(valueJson))
 		statement, err := db.Prepare(valueStr) // Prepare statement.
 		// This is good to avoid SQL injections
 		if err != nil {
@@ -157,30 +158,37 @@ func findTablesWithAliases(query string) map[string]string {
 
 type colInfo struct {
 	columnName string
-	tableName string
+	tableName  string
 }
 
-func regenerateColInfo(col string, aliasToTable map[string]string ) colInfo{
+func regenerateColInfo(col string, aliasToTable map[string]string) colInfo {
 
 	colSplited := strings.Split(col, "____")
 	qualifier := ""
+	name := ""
 	if len(aliasToTable) != 1 {
-		qualifier = colSplited[0]
-	}else{
-		for _, value := range aliasToTable{
+		qualifier = aliasToTable[colSplited[0]]
+		name = strings.Join(colSplited[1:], ".")
+	} else {
+		for _, value := range aliasToTable {
 			qualifier = value
 			break
 		}
+		_, ok := aliasToTable[colSplited[0]]
+		if ok {
+			name = strings.Join(colSplited[1:], ".")
+		} else {
+			name = strings.Join(colSplited, ".")
+		}
 	}
-	name := strings.Join(colSplited[1:],".")
 
-	tableName := aliasToTable[qualifier]
-	columnName := fmt.Sprintf(`"$.Object.%s"`, name)
+	tableName := qualifier
+	columnName := fmt.Sprintf("$.Object.%s", name)
 
 	return colInfo{columnName, tableName}
 }
 
-func updateAST(query string,aliasToTable map[string]string) string {
+func updateQuery(query string, aliasToTable map[string]string) string {
 
 	query = strings.ReplaceAll(query, ".", "____")
 	// Parsear la consulta a un AST
@@ -223,7 +231,7 @@ func updateAST(query string,aliasToTable map[string]string) string {
 			return
 		}
 
-		updaCol := func(binaryExpr *sqlparser.Expr ){
+		updaCol := func(binaryExpr *sqlparser.Expr) {
 
 			colName, _ := (*binaryExpr).(*sqlparser.ColName)
 
@@ -259,8 +267,7 @@ func updateAST(query string,aliasToTable map[string]string) string {
 			if ok {
 				updaCol(&binaryExpr.Right)
 			}
-			
-			
+
 			return true, nil
 		}, selectStmt.Where.Expr)
 	}
@@ -325,5 +332,18 @@ func updateAST(query string,aliasToTable map[string]string) string {
 	updateGroupBy(aliasToTable, selectStmt)
 	updateOrderBy(aliasToTable, selectStmt)
 	modifiedQuery := sqlparser.String(stmt)
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, "`", "'")
+
+	keywords := []string{
+		"select ", "from ", "where ", "join ", " on ", "group by ", "order by ", "having ",
+		"set", "limit", "offset",
+	}
+
+	// Reemplazar cada palabra clave por su versión en mayúsculas
+	for _, keyword := range keywords {
+		upper := strings.ToUpper(keyword)
+		modifiedQuery = strings.ReplaceAll(modifiedQuery, keyword, upper)
+	}
+
 	return modifiedQuery
 }
