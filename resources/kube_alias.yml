@@ -1,7 +1,8 @@
 ---
 version: v1
 aliases:
-  - name: ns
+  - name: pods
+    description: show thre description of each pod, svc linked 
     sql: |
         SELECT p.metadata.name as name_pod, s.metadata.name as name_svc
         FROM 

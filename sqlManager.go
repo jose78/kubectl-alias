@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"reflect"
 	"strings"
 
 	"github.com/jose78/sqlparser"
@@ -82,7 +81,6 @@ func insert(db *sql.DB, k8sValues []unstructured.Unstructured, tbl string) {
 
 		valueJson, _ := json.Marshal(value)
 		valueStr := fmt.Sprintf("INSERT INTO %s(%s) VALUES('%s');", tbl, tbl, string(valueJson))
-		log.Printf("Inserted into table %s , %s", tbl, string(valueJson))
 		statement, err := db.Prepare(valueStr) // Prepare statement.
 		// This is good to avoid SQL injections
 		if err != nil {
@@ -93,39 +91,8 @@ func insert(db *sql.DB, k8sValues []unstructured.Unstructured, tbl string) {
 			log.Fatalln(err.Error())
 		}
 	}
+	log.Printf("Added into table %s %d elements", tbl, len(k8sValues))
 
-}
-func evaluateQuery(sqlStr string) ([]string, error) {
-	var evaluateFrom func(map[string]any) []string
-	evaluateFrom = func(data map[string]any) []string {
-		result := []string{}
-		for key, value := range data {
-			fmt.Println("key: ", key)
-			if key == "Expr" {
-				table := value.(map[string]any)["Name"].(string)
-				result = append(result, table)
-			} else if value != nil && reflect.TypeOf(value).Kind() == reflect.Map {
-				result = append(result, evaluateFrom(value.(map[string]any))...)
-			}
-		}
-		return result
-	}
-	stmt, err := sqlparser.Parse(sqlStr)
-	if err != nil {
-		panic(err)
-	}
-	bytes, _ := json.Marshal(stmt)
-	var data map[string]any
-	json.Unmarshal(bytes, &data)
-
-	result := []string{}
-	from := data["From"]
-	lstFrom := from.([]any)
-	for _, itemFrom := range lstFrom {
-		result = append(result, evaluateFrom(itemFrom.(map[string]any))...)
-	}
-
-	return result, nil
 }
 
 func findTablesWithAliases(query string) map[string]string {

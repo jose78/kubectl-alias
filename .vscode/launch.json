@@ -32,7 +32,7 @@
             "request": "launch",
             "mode": "auto",
             "program": "${fileDirname}",
-            "args": ["ns"],
+            "args": ["pods"],
             "env": {
                 "KUBEALIAS": "/home/jose/ws/kubectl-fuck/resources/kube_alias.yml"
             }

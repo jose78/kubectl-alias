@@ -39,5 +39,6 @@ func (alias AliasDefV1) execute(ctx context.Context) {
 	sqlSelect := updateQuery(aliasFiltered[0].SQL, aliasToTable)
 	dataSelect_1 := evaluateSelect(sqliteDatabase, sqlSelect)
 
+	
 	fmt.Println(dataSelect_1)
 }
