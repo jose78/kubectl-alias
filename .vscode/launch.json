@@ -9,7 +9,33 @@
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${fileDirname}"
+            "program": "${fileDirname}",
+            "args": ["deploy"],
+            
+            "env": {
+                "KUBEALIAS": "/home/jose/ws/kubectl-fuck/resources/kube_alias.yml"
+            }
+        },{
+            "name": "CONF Launch Package",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${fileDirname}",
+            "args": ["conf"],
+            
+            "env": {
+                "KUBEALIAS": "/home/jose/ws/kubectl-fuck/resources/kube_alias.yml"
+            }
+        },{
+            "name": "NS Launch Package",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${fileDirname}",
+            "args": ["pods"],
+            "env": {
+                "KUBEALIAS": "/home/jose/ws/kubectl-fuck/resources/kube_alias.yml"
+            }
         }
     ]
 }
