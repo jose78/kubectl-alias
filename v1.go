@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jose78/go-collections"
 )
@@ -39,6 +38,6 @@ func (alias AliasDefV1) execute(ctx context.Context) {
 	sqlSelect := updateQuery(aliasFiltered[0].SQL, aliasToTable)
 	dataSelect_1 := evaluateSelect(sqliteDatabase, sqlSelect)
 
-	
-	fmt.Println(dataSelect_1)
+	// fmt.Println(dataSelect_1)
+	printStdout(dataSelect_1)
 }

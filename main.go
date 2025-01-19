@@ -35,14 +35,13 @@ func init() {
 	sqliteDatabase, _ = sql.Open("sqlite3", "./sqlite-database.db") // Open the created SQLite File
 }
 
-func destroy(){
+func destroy() {
 	sqliteDatabase.Close()
 	os.Remove("./sqlite-database.db")
 }
 
 func main() {
 	ctx := context.Background()
-
 
 	ctx = context.WithValue(ctx, CTE_NS, "")
 
@@ -52,7 +51,7 @@ func main() {
 	ctx = context.WithValue(ctx, CTX_KEY_ALIAS_NAME, os.Args[1])
 
 	loadKubeAlias().execute(ctx)
-	defer destroy() 
+	defer destroy()
 
 	//k8sParams :=  kubeParams{namespace: "", kubeconfPath: "", k8sObjs: []string{} }
 	//	objRetrieved := RetrieveK8sObjects(k8sParams)
