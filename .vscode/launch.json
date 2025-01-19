@@ -27,7 +27,7 @@
                 "KUBEALIAS": "/home/jose/ws/kubectl-fuck/resources/kube_alias.yml"
             }
         },{
-            "name": "NS Launch Package",
+            "name": "PODS Launch Package",
             "type": "go",
             "request": "launch",
             "mode": "auto",

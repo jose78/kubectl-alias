@@ -12,10 +12,9 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-type row map[string]any
 type selectResult struct {
 	columns []string
-	rows    map[int]row
+	rows    []map[string]any
 }
 
 // Execute SElect
@@ -30,8 +29,7 @@ func evaluateSelect(db *sql.DB, sqlSelect string) selectResult {
 	if err != nil {
 		ErrorSqlReadingColumns.buildMsgError(err).KO()
 	}
-	results := selectResult{columns: columns, rows: map[int]row{}}
-	index := 0
+	results := selectResult{columns: columns, rows: []map[string]any{}}
 	for rows.Next() {
 		values := make([]interface{}, len(columns))
 		valuePtrs := make([]interface{}, len(columns))
@@ -41,7 +39,7 @@ func evaluateSelect(db *sql.DB, sqlSelect string) selectResult {
 		if err := rows.Scan(valuePtrs...); err != nil {
 			ErrorSqlScaningResultSelect.buildMsgError(err).KO()
 		}
-		row := row{}
+		row := map[string]any{}
 		for i, col := range columns {
 			var v interface{}
 			if b, ok := values[i].([]byte); ok {
@@ -51,8 +49,7 @@ func evaluateSelect(db *sql.DB, sqlSelect string) selectResult {
 			}
 			row[col] = v
 		}
-		results.rows[index] = row
-		index++
+		results.rows = append(results.rows, row)
 	}
 	return results
 }

@@ -127,15 +127,15 @@ func retrieveK8sObjects(ctx context.Context) []unstructured.Unstructured {
 	table := ctx.Value(CTE_TABLE).(string)
 	mapK8sObject := generateMapObjects(conf.clientConf, ns)
 	result := []unstructured.Unstructured{}
-	
-		obj, ok := mapK8sObject[table]
-		if !ok {
-			ErrorK8sObjectnotSupported.buildMsgError(table).KO()
-		}
-		func(conf K8sConf, table string) {
-			k8sObjs := obj.retrieveContent(conf.restConf, table)
-			result = k8sObjs
-		}(conf, table)
-	
+
+	obj, ok := mapK8sObject[table]
+	if !ok {
+		ErrorK8sObjectnotSupported.buildMsgError(table).KO()
+	}
+	func(conf K8sConf, table string) {
+		k8sObjs := obj.retrieveContent(conf.restConf, table)
+		result = k8sObjs
+	}(conf, table)
+
 	return result
 }
