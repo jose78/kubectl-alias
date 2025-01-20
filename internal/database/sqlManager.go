@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"database/sql"
@@ -7,29 +7,30 @@ import (
 	"log"
 	"strings"
 
+	"github.com/jose78/kubectl-fuck/commons"
 	"github.com/jose78/sqlparser"
 	_ "github.com/mattn/go-sqlite3" // Import go-sqlite3 library
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
-type selectResult struct {
-	columns []string
-	rows    []map[string]any
+type SelectResult struct {
+	Columns []string
+	Rows    []map[string]any
 }
 
-// Execute SElect
-func evaluateSelect(db *sql.DB, sqlSelect string) selectResult {
+// Execute Select winthin the database
+func EvaluateSelect(db *sql.DB, sqlSelect string) SelectResult {
 
 	rows, errSelect := db.Query(sqlSelect)
 	if errSelect != nil {
-		ErrorSqlRuningSelect.buildMsgError(sqlSelect, errSelect).KO()
+		commons.ErrorSqlRuningSelect.BuildMsgError(sqlSelect, errSelect).KO()
 	}
 	defer rows.Close() // Ensure rows are closed even if errors occur
 	columns, err := rows.Columns()
 	if err != nil {
-		ErrorSqlReadingColumns.buildMsgError(err).KO()
+		commons.ErrorSqlReadingColumns.BuildMsgError(err).KO()
 	}
-	results := selectResult{columns: columns, rows: []map[string]any{}}
+	results := SelectResult{Columns: columns, Rows: []map[string]any{}}
 	for rows.Next() {
 		values := make([]interface{}, len(columns))
 		valuePtrs := make([]interface{}, len(columns))
@@ -37,7 +38,7 @@ func evaluateSelect(db *sql.DB, sqlSelect string) selectResult {
 			valuePtrs[i] = &values[i]
 		}
 		if err := rows.Scan(valuePtrs...); err != nil {
-			ErrorSqlScaningResultSelect.buildMsgError(err).KO()
+			commons.ErrorSqlScaningResultSelect.BuildMsgError(err).KO()
 		}
 		row := map[string]any{}
 		for i, col := range columns {
@@ -49,13 +50,13 @@ func evaluateSelect(db *sql.DB, sqlSelect string) selectResult {
 			}
 			row[col] = v
 		}
-		results.rows = append(results.rows, row)
+		results.Rows = append(results.Rows, row)
 	}
 	return results
 }
 
 // CReate table
-func createTable(db *sql.DB, table string) {
+func CreateTable(db *sql.DB, table string) {
 
 	data := `CREATE TABLE %s (
         id INTEGER PRIMARY KEY,
@@ -71,8 +72,8 @@ func createTable(db *sql.DB, table string) {
 	log.Printf("%s table created\n", table)
 }
 
-// insert list of items of same type in a table
-func insert(db *sql.DB, k8sValues []unstructured.Unstructured, tbl string) {
+// Insert list of items of same type in a table
+func Insert(db *sql.DB, k8sValues []unstructured.Unstructured, tbl string) {
 
 	for _, value := range k8sValues {
 
@@ -92,7 +93,7 @@ func insert(db *sql.DB, k8sValues []unstructured.Unstructured, tbl string) {
 
 }
 
-func findTablesWithAliases(query string) map[string]string {
+func FindTablesWithAliases(query string) map[string]string {
 	query = strings.ReplaceAll(query, ".", "____")
 	// Parsear la consulta a un AST
 	stmt, _ := sqlparser.Parse(query)
@@ -152,7 +153,7 @@ func regenerateColInfo(col string, aliasToTable map[string]string) colInfo {
 	return colInfo{columnName, tableName}
 }
 
-func updateQuery(query string, aliasToTable map[string]string) string {
+func UpdateQuery(query string, aliasToTable map[string]string) string {
 
 	query = strings.ReplaceAll(query, ".", "____")
 	// Parsear la consulta a un AST

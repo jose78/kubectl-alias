@@ -1,4 +1,4 @@
-package main
+package database
 
 import (
 	"testing"
@@ -32,8 +32,8 @@ func Test_manipulateSElect(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mapTables := findTablesWithAliases(tt.args.query)
-			got := updateQuery(tt.args.query, mapTables)
+			mapTables := FindTablesWithAliases(tt.args.query)
+			got := UpdateQuery(tt.args.query, mapTables)
 			if got != tt.want {
 				t.Errorf("manipulateSElect() = %v, want %v", got, tt.want)
 			}

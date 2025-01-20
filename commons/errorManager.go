@@ -1,4 +1,4 @@
-package main
+package commons
 
 import (
 	"fmt"
@@ -30,7 +30,7 @@ const (
 	ErrorSqlScaningResultSelect
 )
 
-func (k8s errorManager) buildMsgError(params ...any) ErrorSystem {
+func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 
 	var errorSystem ErrorSystem
 
