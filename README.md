@@ -1,1 +1,1 @@
-# kubectl-fuck
+# kubectl-alias

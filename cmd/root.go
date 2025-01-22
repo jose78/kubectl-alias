@@ -1,5 +1,5 @@
 /*
-Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com) 
+Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,23 +22,33 @@ THE SOFTWARE.
 package cmd
 
 import (
+	"fmt"
 	"os"
+	"strings"
 
+	"github.com/jose78/go-collections"
+	"github.com/jose78/kubectl-alias/service"
 	"github.com/spf13/cobra"
 )
 
-
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "kubectl-fuck",
-	Short: "A brief description of your application",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
+	Use:   "kubectl-alias",
+	Short: "Customize your Kubernetes queries using SQL, including JOINs across different resources",
+	Long: `This tool empowers you to customize your queries to Kubernetes resources using SQL. 
+With support for JOIN operations, you can combine and filter data from multiple Kubernetes objects 
+(Pods, ConfigMaps, Services, and more) seamlessly.
 
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+Key features:
+- Write SQL queries to interact with Kubernetes resources.
+- Perform JOINs across different Kubernetes object types.
+- Customize subcommands and their behavior via a configuration file referenced by the KUBEALIAS environment variable.
+
+Usage example:
+kubectl alias subCommand arg1 arg2... argN
+
+By defining subcommands (with or without arguments) in the KUBEALIAS configuration file, 
+you can tailor the CLI to suit your specific Kubernetes query needs.`,
 	// Uncomment the following line if your bare application
 	// has an action associated with it:
 	// Run: func(cmd *cobra.Command, args []string) { },
@@ -54,15 +64,44 @@ func Execute() {
 }
 
 func init() {
-	// Here you will define your flags and configuration settings.
-	// Cobra supports persistent flags, which, if defined here,
-	// will be global for your application.
 
-	// rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.kubectl-fuck.yaml)")
+	contentKubeAlias := service.LoadKubeAlias()
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	aliases, okAliases := contentKubeAlias["aliases"]
+	if !okAliases {
+		return
+	}
+
+	for name, value := range aliases.(map[string]any) {
+		mapperArg := func(value string) any {
+			return fmt.Sprintf("[%s]", strings.ToUpper(strings.ReplaceAll(value, " ", "_")))
+		}
+
+		item := value.(map[string]any)
+		short := fmt.Sprintf("%s", item["short"])
+		long := fmt.Sprintf("%s", item["long"])
+
+		use := name
+		sizeArgs := 0
+		args, okArgs := item["args"]
+		if okArgs {
+			sizeArgs = len(args.([]string))
+			var useList []string
+			collections.Map(mapperArg, args.([]string), &useList)
+			use = fmt.Sprintf("%s %s ", name, strings.Join(useList, " "))
+		}
+
+		var subCmd = &cobra.Command{
+			Use:   use,
+			Short: short,
+			Long:  long,
+			Args:  cobra.ExactArgs(sizeArgs), // Enforce exactly the len of the arguments
+			Run: func(cmd *cobra.Command, args []string) {
+				service.RunAlias(args)
+			},
+		}
+
+		rootCmd.AddCommand(subCmd)
+
+	}
 }
-
-

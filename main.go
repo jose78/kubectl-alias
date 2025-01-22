@@ -1,5 +1,5 @@
 /*
-Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com) 
+Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -21,7 +21,7 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/jose78/kubectl-fuck/cmd"
+import "github.com/jose78/kubectl-alias/cmd"
 
 func main() {
 	cmd.Execute()

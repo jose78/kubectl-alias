@@ -1,3 +1,25 @@
+/*
+Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 package commons
 
 import (
@@ -17,14 +39,16 @@ const (
 	ErrorK8sGeneratingDynamicClient
 	ErrorK8sRestConfig
 	ErrorK8sRestResource
+	ErrorK8sRestResourceWithoutNS
 	ErrorK8sClientConfig
 	ErrorK8sKubeconfgNotAccesible
 	ErrorJsonMarshallResourceList
 	ErrorKubeAliasPathNotDefined
+	ErrorKubeAliasParseFile
 	ErrorKubeAliasReadingFile
 	ErrorKubeAliasVersionNotFoud
 	ErrorKubeAliasNotFoud
-	ErrorKubeAliasDuplicated
+
 	ErrorSqlRuningSelect
 	ErrorSqlReadingColumns
 	ErrorSqlScaningResultSelect
@@ -45,7 +69,7 @@ func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 	case ErrorK8sClientConfig:
 		errorSystem = ErrorSystem{4, fmt.Sprintf("generatig the client conf for the path %s. %v", params[0], params[1])}
 	case ErrorK8sRestResource:
-		errorSystem = ErrorSystem{5, fmt.Sprintf("getting the namespace %s;resource %v", params[1], params[0])}
+		errorSystem = ErrorSystem{5, fmt.Sprintf("getting the resource %v in the ns %s: %v", params[0], params[1], params[2])}
 	case ErrorJsonMarshallResourceList:
 		errorSystem = ErrorSystem{6, fmt.Sprintf("in the conversion of items returned of k8s to JSON for key %s", params[0])}
 	case ErrorK8sKubeconfgNotAccesible:
@@ -64,6 +88,10 @@ func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 		errorSystem = ErrorSystem{13, fmt.Sprintf("reading the columns:%v", params[0])}
 	case ErrorSqlScaningResultSelect:
 		errorSystem = ErrorSystem{14, fmt.Sprintf("failed to scan row: %v", params[0])}
+	case ErrorKubeAliasParseFile:
+		errorSystem = ErrorSystem{15, fmt.Sprintf("parsing the kube_alias file in this path:%s. %v", params[0], params[1])}
+	case ErrorK8sRestResourceWithoutNS:
+		errorSystem = ErrorSystem{16, fmt.Sprintf("getting the resource %v: %v", params[0], params[1])}
 	}
 
 	errorSystem.errorMsg = fmt.Sprintf("error msg: %s\nerror code: %d", errorSystem.errorMsg, errorSystem.errorCode)

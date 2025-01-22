@@ -1,3 +1,25 @@
+/*
+Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 package service
 
 import (
@@ -5,63 +27,65 @@ import (
 	"os"
 	"strings"
 
-	collection "github.com/jose78/go-collections"
-	"github.com/jose78/kubectl-fuck/commons"
-	"github.com/jose78/kubectl-fuck/internal/alias"
-	"gopkg.in/yaml.v2"
+	"github.com/jose78/kubectl-alias/commons"
+	"github.com/jose78/kubectl-alias/internal/alias"
+	"github.com/mitchellh/mapstructure"
+	"gopkg.in/yaml.v3"
 )
 
-func runAlias() {
+func RunAlias(args []string) {
 	ctx := context.Background()
 
 	ctx = context.WithValue(ctx, commons.CTE_NS, "")
 
 	if len(os.Args) > 2 {
-		ctx = context.WithValue(ctx, commons.CTX_KEY_ALIAS_ARGS, os.Args[2:])
+		ctx = context.WithValue(ctx, commons.CTX_KEY_ALIAS_ARGS, args)
 	}
 	ctx = context.WithValue(ctx, commons.CTX_KEY_ALIAS_NAME, os.Args[1])
 
-	loadKubeAlias().Execute(ctx)
+	aliasContent := LoadKubeAlias()
+	cmd := factoryCommand(aliasContent)
+	cmd.Execute(ctx)
 }
 
-func factoryCommand(version string) func([]byte) alias.Command {
-	var fn func([]byte) alias.Command
-	version = strings.TrimSpace(version)
+type builderCommand func(map[string]any) alias.Command
+
+func factoryCommand(aliasContent map[string]any) alias.Command {
+
+	version, okVersionIsContained := aliasContent["version"]
+	if !okVersionIsContained {
+		commons.ErrorKubeAliasVersionNotFoud.BuildMsgError().KO()
+	}
+
+	var fn builderCommand
+	version = strings.TrimSpace(version.(string))
 	switch version {
 	case "v1":
-		fn = func(s []byte) alias.Command {
-			alias := alias.AliasDefV1{}
-			yaml.Unmarshal(s, &alias)
+		fn = func(m map[string]any) alias.Command {
+			var alias alias.AliasDefV1
+			mapstructure.Decode(m, &alias)
 			return alias
 		}
 	}
-	return fn
+	return fn(aliasContent)
 }
 
-// loadKubeAlias
-func loadKubeAlias() alias.Command {
+func LoadKubeAlias() map[string]any {
 
-	kubepath := os.Getenv("KUBEALIAS")
+	kubepath := os.Getenv(commons.ENV_VAR_KUBEALIAS_NAME)
 	if kubepath == "" {
 		commons.ErrorKubeAliasPathNotDefined.BuildMsgError().KO()
 	}
 
-	aliasByteConent, errReadinfKubeakis := os.ReadFile(kubepath)
-	if errReadinfKubeakis != nil {
-		commons.ErrorKubeAliasReadingFile.BuildMsgError(kubepath, errReadinfKubeakis)
+	aliasByteConent, errReadingKubeAliasContent := os.ReadFile(kubepath)
+	if errReadingKubeAliasContent != nil {
+		commons.ErrorKubeAliasReadingFile.BuildMsgError(kubepath, errReadingKubeAliasContent).KO()
 	}
 
-	// Extract the version declared within the file
-	constent := strings.Split(string(aliasByteConent), "\n")
-	var result []string
-	collection.Filter(func(data string) bool { return strings.HasPrefix(data, "version") }, constent, &result)
-
-	// if version is not declared, then the application will be finished
-	if len(result) == 0 {
-		commons.ErrorKubeAliasVersionNotFoud.BuildMsgError().KO()
+	var result map[string]any
+	errParsingKubeAliasContent := yaml.Unmarshal(aliasByteConent, &result)
+	if errParsingKubeAliasContent != nil {
+		commons.ErrorKubeAliasParseFile.BuildMsgError(kubepath, errParsingKubeAliasContent)
 	}
-
-	version := strings.Split(result[0], ":")[1]
-	cmd := factoryCommand(version)(aliasByteConent)
-	return cmd
+	return result
 }

@@ -1,4 +1,4 @@
-module github.com/jose78/kubectl-fuck
+module github.com/jose78/kubectl-alias
 
 go 1.22.0
 
@@ -6,6 +6,7 @@ require (
 	github.com/jose78/go-collections v0.0.0-20241019065928-96b487c772ab
 	github.com/jose78/sqlparser v0.0.0-20180606152119-120387863bf2
 	github.com/mattn/go-sqlite3 v1.14.17
+	github.com/mitchellh/mapstructure v1.5.0
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/spf13/cobra v1.8.1
 	gopkg.in/yaml.v2 v2.4.0
