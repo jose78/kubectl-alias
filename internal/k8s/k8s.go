@@ -1,10 +1,33 @@
+/*
+Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
+*/
+
 package k8s
 
 import (
 	"context"
+	"fmt"
 	"os"
 
-	"github.com/jose78/kubectl-fuck/commons"
+	"github.com/jose78/kubectl-alias/commons"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -24,13 +47,16 @@ func (resource defaultResource) retrieveContent(restConf *rest.Config, key strin
 	var errResource error
 	if resource.NameSpace == "" {
 		resourceList, errResource = dynamicClient.Resource(resource.GroupVersionResource).List(context.TODO(), metav1.ListOptions{})
+		if errResource != nil {
+			commons.ErrorK8sRestResourceWithoutNS.BuildMsgError(resource, errResource).KO()
+		}
 	} else {
 		resourceList, errResource = dynamicClient.Resource(resource.GroupVersionResource).Namespace(resource.NameSpace).List(context.TODO(), metav1.ListOptions{})
+		if errResource != nil {
+			commons.ErrorK8sRestResource.BuildMsgError(resource, resource.NameSpace, errResource).KO()
+		}
 	}
 
-	if errResource != nil {
-		commons.ErrorK8sRestResource.BuildMsgError(resource.NameSpace, resource.GroupVersionResource).KO()
-	}
 	return resourceList.Items
 }
 
@@ -43,9 +69,9 @@ type K8sConf struct {
 func retrieveKubeConf(ctx context.Context) string {
 	path := ctx.Value(commons.CTE_KUBECONFIG)
 	if path != nil && path.(string) != "" {
-		os.Setenv(commons.CTE_KUBECONFIG, path.(string))
+		os.Setenv(commons.ENV_VAR_KUBECONFIG, path.(string))
 	}
-	kubeconfigPath := os.Getenv(commons.CTE_KUBECONFIG)
+	kubeconfigPath := os.Getenv(commons.ENV_VAR_KUBECONFIG)
 	if kubeconfigPath == "" {
 		kubeconfigPath = clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
 	}
@@ -58,9 +84,9 @@ if is also empty then it will check the default path.
 */
 func createConfiguration(path string) K8sConf {
 	if path != "" {
-		os.Setenv(commons.CTE_KUBECONFIG, path)
+		os.Setenv(commons.ENV_VAR_KUBECONFIG, path)
 	}
-	kubeconfigPath := os.Getenv(commons.CTE_KUBECONFIG)
+	kubeconfigPath := os.Getenv(commons.ENV_VAR_KUBECONFIG)
 	if kubeconfigPath == "" {
 		kubeconfigPath = clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
 	}
@@ -78,32 +104,43 @@ func createConfiguration(path string) K8sConf {
 	return k8sConf
 }
 
-// generateMapObjects retrieve from cluster the map of Resource by name and alias.
-func generateMapObjects(clientConfig *kubernetes.Clientset, ns string) map[string]defaultResource {
+// GenerateMapObjects retrieve from cluster the map of Resource by name and alias.
+func GenerateMapObjects(clientConfig *kubernetes.Clientset, ns string) map[string]defaultResource {
 
 	result := map[string]defaultResource{}
 
 	//Retrieve the list of apiResources
 	apiResourceLists, _ := clientConfig.Discovery().ServerPreferredResources()
 
-	// Iterate over each ApiResource and their resource
+	// Procesar los recursos
 	for _, apiResourceList := range apiResourceLists {
-		for _, apiResource := range apiResourceList.APIResources {
-			defaultResource := defaultResource{
-				GroupVersionResource: schema.GroupVersionResource{
-					Version:  apiResourceList.GroupVersion,
-					Group:    apiResource.Group,
-					Resource: apiResource.Name,
-				}, NameSpace: ns,
+		groupVersion, err := schema.ParseGroupVersion(apiResourceList.GroupVersion)
+		if err != nil {
+			fmt.Printf("Error parsing GroupVersion: %v", err)
+			continue
+		}
+
+		// Iterar sobre los recursos individuales
+		for _, resource := range apiResourceList.APIResources {
+			defaultNs := ""
+			if resource.Namespaced{
+				defaultNs = ns
 			}
-			if len(apiResource.ShortNames) > 0 {
+			defaultResource := defaultResource{
+					GroupVersionResource: schema.GroupVersionResource{
+						Version:  groupVersion.Version,
+						Group:    groupVersion.Group,
+						Resource: resource.Name,
+					}, NameSpace: defaultNs,
+				}
+			if len(resource.ShortNames) > 0 {
 				// Check if there some aliases, in that case, for each alias it will store a new entry
-				for _, alias := range apiResource.ShortNames {
+				for _, alias := range resource.ShortNames {
 					result[alias] = defaultResource
 				}
 			}
-			result[apiResource.SingularName] = defaultResource
-			result[apiResource.Name] = defaultResource
+			result[resource.SingularName] = defaultResource
+			result[resource.Name] = defaultResource
 		}
 	}
 	return result
@@ -120,7 +157,7 @@ func RetrieveK8sObjects(ctx context.Context) []unstructured.Unstructured {
 	conf := createConfiguration(pathK8s)
 	ns := ctx.Value(commons.CTE_NS).(string)
 	table := ctx.Value(commons.CTE_TABLE).(string)
-	mapK8sObject := generateMapObjects(conf.clientConf, ns)
+	mapK8sObject := GenerateMapObjects(conf.clientConf, ns)
 	result := []unstructured.Unstructured{}
 
 	obj, ok := mapK8sObject[table]
