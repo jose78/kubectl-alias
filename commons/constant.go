@@ -33,4 +33,5 @@ const  (
 	CTE_KUBECONFIG      
 	CTE_NS              
 	CTE_TABLE           
+	CTE_MAP_K8S_OBJECT
 )

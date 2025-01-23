@@ -2,10 +2,10 @@
 version: v1
 aliases:
    pods:
-      short: show thre description of each pod, svc linked, rs.metada.name rs_name
+      short: show thre description of each pod, svc linked
       long: show thre description of each pod, svc linked LONG
       sql: |
-          SELECT p.metadata.namespace as NAMESPACE ,  p.metadata.name as name_pod, s.metadata.name as name_svc, s.spec.ports as svc_ports
+          SELECT p.metadata.namespace as NAMESPACE ,  p.metadata.name as name_pod, s.metadata.name as name_svc, s.spec.ports as svc_ports, d.metadata.name as name_deploy
           FROM 
-              pod p, svc s, replicasets r
-          where p.metadata.labels.app = s.spec.selector.app and p.metadata.namespace LIKE r.metadata.namespace || '%'
+              pod p, svc s, deploy d
+          where p.metadata.labels.app = s.spec.selector.app and d.metadata.labels.app = s.spec.selector.app  

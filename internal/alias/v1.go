@@ -78,6 +78,13 @@ func (alias AliasDefV1) Execute(ctx context.Context) {
 	aliasToTable := database.FindTablesWithAliases(aliasFiltered.SQL)
 	tables := []string{}
 	collections.Map(func(touple collections.Touple) any { return touple.Value }, aliasToTable, &tables)
+
+
+	k8s.K8sConf{}
+
+	mapObjects := k8s.GenerateMapObjects(ctx)
+	ctx = context.WithValue(ctx, commons.CTE_MAP_K8S_OBJECT, mapObjects)
+
 	for _, table := range tables {
 		ctx = context.WithValue(ctx, commons.CTE_TABLE, table)
 		jsonContent := k8s.RetrieveK8sObjects(ctx)

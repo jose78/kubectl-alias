@@ -37,7 +37,7 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-func (resource defaultResource) retrieveContent(restConf *rest.Config, key string) []unstructured.Unstructured {
+func (resource defaultResource) retrieveContent(restConf *rest.Config) []unstructured.Unstructured {
 	dynamicClient, err := dynamic.NewForConfig(restConf)
 	if err != nil {
 		commons.ErrorK8sGeneratingDynamicClient.BuildMsgError(err).KO()
@@ -66,10 +66,9 @@ type K8sConf struct {
 }
 
 // retrieveKubeConf discover which is the path of kubeconfig
-func retrieveKubeConf(ctx context.Context) string {
-	path := ctx.Value(commons.CTE_KUBECONFIG)
-	if path != nil && path.(string) != "" {
-		os.Setenv(commons.ENV_VAR_KUBECONFIG, path.(string))
+func retrieveKubeConf(path string) string {
+	if path != "" {
+		os.Setenv(commons.ENV_VAR_KUBECONFIG, path)
 	}
 	kubeconfigPath := os.Getenv(commons.ENV_VAR_KUBECONFIG)
 	if kubeconfigPath == "" {
@@ -104,13 +103,22 @@ func createConfiguration(path string) K8sConf {
 	return k8sConf
 }
 
+type k8sConfig struct {
+	pathK8sConfig string
+	namespaceDefault string
+	k8sResources map[string]defaultResource
+}
+
 // GenerateMapObjects retrieve from cluster the map of Resource by name and alias.
-func GenerateMapObjects(clientConfig *kubernetes.Clientset, ns string) map[string]defaultResource {
-
-	result := map[string]defaultResource{}
-
+func GenerateMapObjects(config k8sConfig ) map[string]defaultResource {
+	ns := config.namespaceDefault
+	pathK8s := retrieveKubeConf(config.pathK8sConfig)
+	conf := createConfiguration(pathK8s)
+	clientConfig := conf.clientConf
+	
 	//Retrieve the list of apiResources
 	apiResourceLists, _ := clientConfig.Discovery().ServerPreferredResources()
+	result := map[string]defaultResource{}
 
 	// Procesar los recursos
 	for _, apiResourceList := range apiResourceLists {
@@ -152,12 +160,11 @@ type defaultResource struct {
 }
 
 // RetrieveK8sObjects retrieve from k8s ckuster a map of list of componentes deployed
-func RetrieveK8sObjects(ctx context.Context) []unstructured.Unstructured {
-	pathK8s := retrieveKubeConf(ctx)
+func RetrieveK8sObjects(config k8sConfig , table string) []unstructured.Unstructured {
+	
+	pathK8s := retrieveKubeConf(config.pathK8sConfig)
 	conf := createConfiguration(pathK8s)
-	ns := ctx.Value(commons.CTE_NS).(string)
-	table := ctx.Value(commons.CTE_TABLE).(string)
-	mapK8sObject := GenerateMapObjects(conf.clientConf, ns)
+	mapK8sObject :=  config.k8sResources
 	result := []unstructured.Unstructured{}
 
 	obj, ok := mapK8sObject[table]
@@ -165,7 +172,7 @@ func RetrieveK8sObjects(ctx context.Context) []unstructured.Unstructured {
 		commons.ErrorK8sObjectnotSupported.BuildMsgError(table).KO()
 	}
 	func(conf K8sConf, table string) {
-		k8sObjs := obj.retrieveContent(conf.restConf, table)
+		k8sObjs := obj.retrieveContent(conf.restConf)
 		result = k8sObjs
 	}(conf, table)
 
