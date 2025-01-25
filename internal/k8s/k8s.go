@@ -37,6 +37,16 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// retrieveContent retrieves the list of Kubernetes resources of the specified type,
+// using the provided REST configuration to communicate with the Kubernetes API server.
+//
+// Parameters:
+//   - restConf (*rest.Config): The Kubernetes REST configuration used to authenticate
+//     and connect to the API server.
+//
+// Returns:
+//   - []unstructured.Unstructured: A list of Kubernetes resources represented as
+//     unstructured data. This format is useful for handling dynamic or unknown resource schemas.
 func (resource defaultResource) retrieveContent(restConf *rest.Config) []unstructured.Unstructured {
 	dynamicClient, err := dynamic.NewForConfig(restConf)
 	if err != nil {
@@ -60,8 +70,16 @@ func (resource defaultResource) retrieveContent(restConf *rest.Config) []unstruc
 	return resourceList.Items
 }
 
+// K8sConf holds the configuration and client needed to interact with a Kubernetes cluster.
 type K8sConf struct {
-	restConf   *rest.Config
+	// restConf contains the Kubernetes REST configuration used to establish communication
+	// with the Kubernetes API server. This includes authentication details, API server URL,
+	// and other connection settings.
+	restConf *rest.Config
+
+	// clientConf is a Kubernetes clientset, which provides strongly-typed clients
+	// for interacting with various Kubernetes resources (e.g., Pods, Deployments, Services).
+	// It is built using the provided restConf.
 	clientConf *kubernetes.Clientset
 }
 
@@ -77,13 +95,18 @@ func retrieveKubeConf(path string) string {
 	return kubeconfigPath
 }
 
-/*
-createConfiguration given a path, generate a K8sconf to store the client and rest configuration. If the path is empty, then will verify the env VAR_varKUBECONFIG
-if is also empty then it will check the default path.
-*/
-func createConfiguration(path string) K8sConf {
-	if path != "" {
-		os.Setenv(commons.ENV_VAR_KUBECONFIG, path)
+// createConfiguration creates a Kubernetes configuration and clientset based on the provided kubeconfig file path.
+//
+// Parameters:
+//   - pathKubeConfig (string): The file path to the kubeconfig file, which contains
+//     the cluster, user, and authentication details needed to connect to the Kubernetes API server.
+//
+// Returns:
+//   - K8sConf: A struct containing the REST configuration (`restConf`) and the Kubernetes clientset (`clientConf`),
+//     allowing interaction with the Kubernetes cluster.
+func createConfiguration(pathKubeCondif string) K8sConf {
+	if pathKubeCondif != "" {
+		os.Setenv(commons.ENV_VAR_KUBECONFIG, pathKubeCondif)
 	}
 	kubeconfigPath := os.Getenv(commons.ENV_VAR_KUBECONFIG)
 	if kubeconfigPath == "" {
@@ -103,16 +126,36 @@ func createConfiguration(path string) K8sConf {
 	return k8sConf
 }
 
-type k8sConfig struct {
-	pathK8sConfig string
-	namespaceDefault string
-	k8sResources map[string]defaultResource
+
+// K8sInfo encapsulates information and configuration needed to interact with a Kubernetes cluster.
+type K8sInfo struct {
+	// PathK8sConfig specifies the path to the Kubernetes configuration file (kubeconfig).
+	// This file is typically used to authenticate and connect to the Kubernetes API server.
+	PathK8sConfig string
+
+	// NamespaceDefault defines the default Kubernetes namespace to use when none is explicitly provided.
+	// This ensures operations are scoped to the correct namespace by default.
+	NamespaceDefault string
+
+	// K8sResources is a map where the keys represent resource types (e.g., "pods", "services"),
+	// and the values are defaultResource objects that define how to interact with these resources.
+	// This map allows dynamic handling of Kubernetes resources based on their type.
+	K8sResources map[string]defaultResource
 }
 
-// GenerateMapObjects retrieve from cluster the map of Resource by name and alias.
-func GenerateMapObjects(config k8sConfig ) map[string]defaultResource {
-	ns := config.namespaceDefault
-	pathK8s := retrieveKubeConf(config.pathK8sConfig)
+// GenerateMapObjects generates a map of Kubernetes resource types to their corresponding defaultResource objects,
+// using the provided Kubernetes configuration.
+//
+// Parameters:
+//   - config (K8sInfo): A struct containing the necessary Kubernetes configuration, including
+//     the path to the kubeconfig file, the default namespace, and existing resource mappings.
+//
+// Returns:
+//   - map[string]defaultResource: A map where the keys represent resource types (e.g., "pods", "services"),
+//     and the values are `defaultResource` objects that define how to interact with these resource types.
+func GenerateMapObjects(info K8sInfo ) map[string]defaultResource {
+	ns := info.NamespaceDefault
+	pathK8s := retrieveKubeConf(info.PathK8sConfig)
 	conf := createConfiguration(pathK8s)
 	clientConfig := conf.clientConf
 	
@@ -154,27 +197,48 @@ func GenerateMapObjects(config k8sConfig ) map[string]defaultResource {
 	return result
 }
 
+// defaultResource represents a Kubernetes resource with its associated metadata and namespace information.
+//
+// Fields:
+//   - GroupVersionResource (schema.GroupVersionResource): Specifies the group, version,
+//     and resource type of the Kubernetes resource (e.g., apps/v1/replicasets).
+//   - NameSpace (string): The namespace in which the resource resides. If empty, it typically
+//     implies the resource is either cluster-wide or the default namespace is used.
 type defaultResource struct {
 	schema.GroupVersionResource
 	NameSpace string
 }
 
-// RetrieveK8sObjects retrieve from k8s ckuster a map of list of componentes deployed
-func RetrieveK8sObjects(config k8sConfig , table string) []unstructured.Unstructured {
+// RetrieveK8sObjects retrieves a list of Kubernetes resources of the specified type from the cluster,
+// using the provided configuration.
+//
+// Parameters:
+//   - config (K8sInfo): The Kubernetes configuration, including the path to the kubeconfig file,
+//     the default namespace, and mappings of resource types.
+//   - k8sObject (string): The name of the Kubernetes resource type to retrieve (e.g., "pods", "services").
+//
+// Returns:
+//   - []unstructured.Unstructured: A list of unstructured Kubernetes resources of the specified type,
+//     allowing for dynamic handling of their data structure.
+//
+// Notes:
+//   - This function uses the information in `config` to determine the correct resource type and
+//     namespace. If the specified resource type is not supported, an error or empty result may be returned.
+func RetrieveK8sObjects(config K8sInfo , k8sObject string) []unstructured.Unstructured {
 	
-	pathK8s := retrieveKubeConf(config.pathK8sConfig)
+	pathK8s := retrieveKubeConf(config.PathK8sConfig)
 	conf := createConfiguration(pathK8s)
-	mapK8sObject :=  config.k8sResources
+	mapK8sObject :=  config.K8sResources
 	result := []unstructured.Unstructured{}
 
-	obj, ok := mapK8sObject[table]
+	obj, ok := mapK8sObject[k8sObject]
 	if !ok {
-		commons.ErrorK8sObjectnotSupported.BuildMsgError(table).KO()
+		commons.ErrorK8sObjectnotSupported.BuildMsgError(k8sObject).KO()
 	}
-	func(conf K8sConf, table string) {
+	func(conf K8sConf) {
 		k8sObjs := obj.retrieveContent(conf.restConf)
 		result = k8sObjs
-	}(conf, table)
+	}(conf)
 
 	return result
 }

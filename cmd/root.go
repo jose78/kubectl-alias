@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/jose78/go-collections"
+	"github.com/jose78/kubectl-alias/internal/generic"
 	"github.com/jose78/kubectl-alias/service"
 	"github.com/spf13/cobra"
 )
@@ -73,6 +74,11 @@ func init() {
 	}
 
 	for name, value := range aliases.(map[string]any) {
+
+
+		cmdCtx := generic.CommandContext{SubCommand: name}
+		
+
 		mapperArg := func(value string) any {
 			return fmt.Sprintf("[%s]", strings.ToUpper(strings.ReplaceAll(value, " ", "_")))
 		}
@@ -97,7 +103,8 @@ func init() {
 			Long:  long,
 			Args:  cobra.ExactArgs(sizeArgs), // Enforce exactly the len of the arguments
 			Run: func(cmd *cobra.Command, args []string) {
-				service.RunAlias(args)
+				cmdCtx.Args = args
+				service.RunAlias(cmdCtx)
 			},
 		}
 

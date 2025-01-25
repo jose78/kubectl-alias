@@ -20,19 +20,22 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
 
-package alias
+package generic
 
-import "github.com/jose78/kubectl-alias/internal/generic"
+import "github.com/jose78/kubectl-alias/commons"
 
-
-
-
-
-// Command pattern to encapsulate an execution
-type Command interface {
-	Execute(generic.CommandContext)
-}
-
-
-
+// CommandContext encapsulates the contextual information of a CLI command execution.
+// It includes the subcommand being executed, the arguments provided by the user,
+// and any flags set during the command invocation.
+//
+// Fields:
+// - SubCommand: The name of the subcommand executed by the user.
+// - Args: A slice containing the positional arguments passed to the subcommand.
+// - Flags: A map storing flag names as keys and their corresponding values,
+//          representing options or settings provided during execution.
+type CommandContext struct {
+	SubCommand string
+	Args       []string
+	Flags      map[commons.KeyContext]string
+} 
 

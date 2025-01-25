@@ -23,29 +23,21 @@ THE SOFTWARE.
 package service
 
 import (
-	"context"
 	"os"
 	"strings"
 
 	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/kubectl-alias/internal/alias"
+	"github.com/jose78/kubectl-alias/internal/generic"
 	"github.com/mitchellh/mapstructure"
 	"gopkg.in/yaml.v3"
 )
 
-func RunAlias(args []string) {
-	ctx := context.Background()
-
-	ctx = context.WithValue(ctx, commons.CTE_NS, "")
-
-	if len(os.Args) > 2 {
-		ctx = context.WithValue(ctx, commons.CTX_KEY_ALIAS_ARGS, args)
-	}
-	ctx = context.WithValue(ctx, commons.CTX_KEY_ALIAS_NAME, os.Args[1])
+func RunAlias(cmdCtx generic.CommandContext) {
 
 	aliasContent := LoadKubeAlias()
 	cmd := factoryCommand(aliasContent)
-	cmd.Execute(ctx)
+	cmd.Execute(cmdCtx)
 }
 
 type builderCommand func(map[string]any) alias.Command
@@ -69,6 +61,8 @@ func factoryCommand(aliasContent map[string]any) alias.Command {
 	}
 	return fn(aliasContent)
 }
+
+
 
 func LoadKubeAlias() map[string]any {
 

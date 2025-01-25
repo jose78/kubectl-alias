@@ -26,11 +26,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
+	"os"
 
 	"github.com/jose78/kubectl-alias/commons"
-	"github.com/jose78/sqlparser"
-	_ "github.com/mattn/go-sqlite3" // Import go-sqlite3 library
+	_ "github.com/mattn/go-sqlite3" 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -40,9 +39,9 @@ type SelectResult struct {
 }
 
 // Execute Select winthin the database
-func EvaluateSelect(db *sql.DB, sqlSelect string) SelectResult {
+func (conf dbConf)EvaluateSelect(sqlSelect string) SelectResult {
 
-	rows, errSelect := db.Query(sqlSelect)
+	rows, errSelect := conf.db.Query(sqlSelect)
 	if errSelect != nil {
 		commons.ErrorSqlRuningSelect.BuildMsgError(sqlSelect, errSelect).KO()
 	}
@@ -62,14 +61,14 @@ func EvaluateSelect(db *sql.DB, sqlSelect string) SelectResult {
 			commons.ErrorSqlScaningResultSelect.BuildMsgError(err).KO()
 		}
 		row := map[string]any{}
-		for i, col := range columns {
+		for index, column := range columns {
 			var v interface{}
-			if b, ok := values[i].([]byte); ok {
-				v = string(b) // Convertir []byte a string
+			if b, ok := values[index].([]byte); ok {
+				v = string(b)
 			} else {
-				v = values[i]
+				v = values[index]
 			}
-			row[col] = v
+			row[column] = v
 		}
 		results.Rows = append(results.Rows, row)
 	}
@@ -77,7 +76,7 @@ func EvaluateSelect(db *sql.DB, sqlSelect string) SelectResult {
 }
 
 // CReate table
-func CreateTable(db *sql.DB, table string) {
+func (conf dbConf) CreateTable(table string) {
 
 	data := `CREATE TABLE %s (
         id INTEGER PRIMARY KEY,
@@ -85,7 +84,7 @@ func CreateTable(db *sql.DB, table string) {
     );
 `
 	createTable := fmt.Sprintf(data, table, table)
-	statement, err := db.Prepare(createTable)
+	statement, err := conf.db.Prepare(createTable)
 	if err != nil {
 		log.Fatal(err.Error())
 	}
@@ -94,13 +93,13 @@ func CreateTable(db *sql.DB, table string) {
 }
 
 // Insert list of items of same type in a table
-func Insert(db *sql.DB, k8sValues []unstructured.Unstructured, tbl string) {
+func (conf dbConf) Insert( k8sValues []unstructured.Unstructured, tbl string) {
 
 	for _, value := range k8sValues {
 
 		valueJson, _ := json.Marshal(value)
 		valueStr := fmt.Sprintf("INSERT INTO %s(%s) VALUES('%s');", tbl, tbl, string(valueJson))
-		statement, err := db.Prepare(valueStr) // Prepare statement.
+		statement, err := conf.db.Prepare(valueStr) // Prepare statement.
 		// This is good to avoid SQL injections
 		if err != nil {
 			log.Fatalln(err.Error())
@@ -114,222 +113,47 @@ func Insert(db *sql.DB, k8sValues []unstructured.Unstructured, tbl string) {
 
 }
 
-func FindTablesWithAliases(query string) map[string]string {
-	query = strings.ReplaceAll(query, ".", "____")
-	// Parsear la consulta a un AST
-	stmt, _ := sqlparser.Parse(query)
-	selectStmt, ok := stmt.(*sqlparser.Select)
-	if !ok {
-		log.Fatalf("El tipo de consulta no es un SELECT, es: %T", stmt)
-	}
-
-	aliasToTable := map[string]string{}
-	for _, tableExpr := range selectStmt.From {
-		aliasedTable, ok := tableExpr.(*sqlparser.AliasedTableExpr)
-		if !ok {
-			continue
-		}
-
-		tableName := aliasedTable.Expr.(sqlparser.TableName).Name.String()
-
-		alias := tableName
-		if aliasedTable.As.String() != "" {
-			alias = aliasedTable.As.String()
-		}
-
-		aliasToTable[alias] = tableName
-	}
-	return aliasToTable
-}
 
 type colInfo struct {
 	columnName string
 	tableName  string
 }
 
-func regenerateColInfo(col string, aliasToTable map[string]string) colInfo {
 
-	colSplited := strings.Split(col, "____")
-	qualifier := ""
-	name := ""
-	if len(aliasToTable) != 1 {
-		qualifier = aliasToTable[colSplited[0]]
-		name = strings.Join(colSplited[1:], ".")
-	} else {
-		for _, value := range aliasToTable {
-			qualifier = value
-			break
-		}
-		_, ok := aliasToTable[colSplited[0]]
-		if ok {
-			name = strings.Join(colSplited[1:], ".")
-		} else {
-			name = strings.Join(colSplited, ".")
-		}
+
+
+type dbConf struct {
+	db *sql.DB
+}
+type DbConf interface{
+	CreateTable(string)
+	Insert([]unstructured.Unstructured, string)
+	EvaluateSelect(string) SelectResult
+	Destroy()
+} 
+
+
+
+func Load() DbConf{
+	os.Remove("sqlite-database.db") // I delete the file to avoid duplicated records.
+	// SQLite is a file based database.
+
+	file, errCReateDbObj := os.Create("sqlite-database.db") // Create SQLite file
+	if errCReateDbObj != nil {
+		commons.ErrorDbNotCreaterd.BuildMsgError(errCReateDbObj).KO()
 	}
+	file.Close()
+	log.Println("sqlite-database.db created")
 
-	tableName := qualifier
-	columnName := fmt.Sprintf("$.Object.%s", name)
-
-	return colInfo{columnName, tableName}
+	sqliteDatabase, errOpeningDB := sql.Open("sqlite3", "./sqlite-database.db") // Open the created SQLite File
+	if errOpeningDB != nil{
+		commons.ErrorDbOpening.BuildMsgError(errOpeningDB).KO()
+	}
+	conf := dbConf{db: sqliteDatabase}
+	return conf 
 }
 
-func UpdateQuery(query string, aliasToTable map[string]string) string {
-
-	query = strings.ReplaceAll(query, ".", "____")
-	// Parsear la consulta a un AST
-	stmt, _ := sqlparser.Parse(query)
-
-	updateSelect := func(aliasToTable map[string]string, selectStmt *sqlparser.Select) {
-		for i, expr := range selectStmt.SelectExprs {
-			aliasedExpr, ok := expr.(*sqlparser.AliasedExpr)
-			if !ok {
-				continue
-			}
-
-			colName, ok := aliasedExpr.Expr.(*sqlparser.ColName)
-			if !ok {
-				continue
-			}
-
-			col := regenerateColInfo(colName.Name.String(), aliasToTable)
-			tableName := col.tableName
-			columnName := col.columnName
-
-			aliasedExpr.Expr = &sqlparser.FuncExpr{
-				Name: sqlparser.NewColIdent("json_extract"),
-				Exprs: sqlparser.SelectExprs{
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(tableName)},
-					},
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(columnName)},
-					},
-				},
-			}
-
-			selectStmt.SelectExprs[i] = aliasedExpr
-		}
-	}
-
-	updateWhere := func(aliasToTable map[string]string, selectStmt *sqlparser.Select) {
-		if selectStmt.Where == nil {
-			return
-		}
-
-		updaCol := func(binaryExpr *sqlparser.Expr) {
-
-			colName, _ := (*binaryExpr).(*sqlparser.ColName)
-
-			col := regenerateColInfo(colName.Name.String(), aliasToTable)
-			tableName := col.tableName
-			columnName := col.columnName
-
-			*binaryExpr = &sqlparser.FuncExpr{
-				Name: sqlparser.NewColIdent("json_extract"),
-				Exprs: sqlparser.SelectExprs{
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(tableName)},
-					},
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(columnName)},
-					},
-				},
-			}
-		}
-		// Loop through the conditions of the WHERE clause
-		sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
-			binaryExpr, ok := node.(*sqlparser.ComparisonExpr)
-			if !ok {
-				return true, nil
-			}
-
-			_, ok = binaryExpr.Left.(*sqlparser.ColName)
-			if ok {
-				updaCol(&binaryExpr.Left)
-			}
-
-			_, ok = binaryExpr.Right.(*sqlparser.ColName)
-			if ok {
-				updaCol(&binaryExpr.Right)
-			}
-
-			return true, nil
-		}, selectStmt.Where.Expr)
-	}
-
-	updateGroupBy := func(aliasToTable map[string]string, selectStmt *sqlparser.Select) {
-		for i, expr := range selectStmt.GroupBy {
-			colName, ok := expr.(*sqlparser.ColName)
-			if !ok {
-				continue
-			}
-
-			col := regenerateColInfo(colName.Name.String(), aliasToTable)
-			tableName := col.tableName
-			columnName := col.columnName
-
-			selectStmt.GroupBy[i] = &sqlparser.FuncExpr{
-				Name: sqlparser.NewColIdent("json_extract"),
-				Exprs: sqlparser.SelectExprs{
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(tableName)},
-					},
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(columnName)},
-					},
-				},
-			}
-		}
-	}
-
-	updateOrderBy := func(aliasToTable map[string]string, selectStmt *sqlparser.Select) {
-		for i, order := range selectStmt.OrderBy {
-			colName, ok := order.Expr.(*sqlparser.ColName)
-			if !ok {
-				continue
-			}
-
-			col := regenerateColInfo(colName.Name.String(), aliasToTable)
-			tableName := col.tableName
-			columnName := col.columnName
-
-			selectStmt.OrderBy[i].Expr = &sqlparser.FuncExpr{
-				Name: sqlparser.NewColIdent("json_extract"),
-				Exprs: sqlparser.SelectExprs{
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(tableName)},
-					},
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(columnName)},
-					},
-				},
-			}
-		}
-	}
-
-	selectStmt, ok := stmt.(*sqlparser.Select)
-	if !ok {
-		log.Fatalf("El tipo de consulta no es un SELECT, es: %T", stmt)
-	}
-
-	updateSelect(aliasToTable, selectStmt)
-	updateWhere(aliasToTable, selectStmt)
-	updateGroupBy(aliasToTable, selectStmt)
-	updateOrderBy(aliasToTable, selectStmt)
-	modifiedQuery := sqlparser.String(stmt)
-	modifiedQuery = strings.ReplaceAll(modifiedQuery, "`", "'")
-
-	keywords := []string{
-		"select ", "from ", "where ", "join ", " on ", "group by ", "order by ", "having ",
-		"set", "limit", "offset",
-	}
-
-	// Reemplazar cada palabra clave por su versión en mayúsculas
-	for _, keyword := range keywords {
-		upper := strings.ToUpper(keyword)
-		modifiedQuery = strings.ReplaceAll(modifiedQuery, keyword, upper)
-	}
-
-	return modifiedQuery
+func (conf dbConf) Destroy() {
+	conf.db.Close()
+	os.Remove("./sqlite-database.db")
 }
