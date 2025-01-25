@@ -5,7 +5,11 @@ aliases:
       short: show thre description of each pod, svc linked
       long: show thre description of each pod, svc linked LONG
       sql: |
-          SELECT p.metadata.namespace as NAMESPACE ,  p.metadata.name as name_pod, s.metadata.name as name_svc, s.spec.ports as svc_ports, d.metadata.name as name_deploy
+          SELECT p.metadata.namespace as NAMESPACE ,  p.metadata.name as name_pod, 
+          s.metadata.name as name_svc, s.spec.ports as svc_ports, 
+          d.metadata.name as name_deploy, n.metadata.name as node_name
           FROM 
-              pod p, svc s, deploy d
-          where p.metadata.labels.app = s.spec.selector.app and d.metadata.labels.app = s.spec.selector.app  
+              pod p, svc s, deploy d , node n
+          where p.metadata.labels.app = s.spec.selector.app and 
+          d.metadata.labels.app = s.spec.selector.app  AND 
+          n.metadata.name = p.spec.nodeName

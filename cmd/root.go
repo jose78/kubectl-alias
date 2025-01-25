@@ -27,6 +27,7 @@ import (
 	"strings"
 
 	"github.com/jose78/go-collections"
+	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/kubectl-alias/internal/generic"
 	"github.com/jose78/kubectl-alias/service"
 	"github.com/spf13/cobra"
@@ -55,6 +56,12 @@ you can tailor the CLI to suit your specific Kubernetes query needs.`,
 	// Run: func(cmd *cobra.Command, args []string) { },
 }
 
+
+var (
+	kubeconfig *string 
+    namespace *string 
+)
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
@@ -74,19 +81,13 @@ func init() {
 	}
 
 	for name, value := range aliases.(map[string]any) {
-
-
 		cmdCtx := generic.CommandContext{SubCommand: name}
-		
-
 		mapperArg := func(value string) any {
 			return fmt.Sprintf("[%s]", strings.ToUpper(strings.ReplaceAll(value, " ", "_")))
 		}
-
 		item := value.(map[string]any)
 		short := fmt.Sprintf("%s", item["short"])
 		long := fmt.Sprintf("%s", item["long"])
-
 		use := name
 		sizeArgs := 0
 		args, okArgs := item["args"]
@@ -96,19 +97,20 @@ func init() {
 			collections.Map(mapperArg, args.([]string), &useList)
 			use = fmt.Sprintf("%s %s ", name, strings.Join(useList, " "))
 		}
-
 		var subCmd = &cobra.Command{
 			Use:   use,
 			Short: short,
 			Long:  long,
-			Args:  cobra.ExactArgs(sizeArgs), // Enforce exactly the len of the arguments
+			Args:  cobra.ExactArgs(sizeArgs),
 			Run: func(cmd *cobra.Command, args []string) {
+				flags := map[commons.KeyContext]string{commons.CTE_KUBECONFIG: *kubeconfig, commons.CTE_NS: *namespace}
+				cmdCtx.Flags = flags
 				cmdCtx.Args = args
 				service.RunAlias(cmdCtx)
 			},
 		}
-
 		rootCmd.AddCommand(subCmd)
-
+		kubeconfig = rootCmd.PersistentFlags().StringP("kubeconfig", "k", "", "Specifies the path to the Kubernetes configuration file (default is $HOME/.kube/config).")
+		namespace = rootCmd.PersistentFlags().StringP("namespace", "n", "", "Specifies the default Kubernetes namespace to use.")
 	}
 }
