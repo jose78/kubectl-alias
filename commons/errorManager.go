@@ -48,10 +48,12 @@ const (
 	ErrorKubeAliasReadingFile
 	ErrorKubeAliasVersionNotFoud
 	ErrorKubeAliasNotFoud
-
 	ErrorSqlRuningSelect
+	ErrorSqlNotASelect
 	ErrorSqlReadingColumns
 	ErrorSqlScaningResultSelect
+	ErrorDbNotCreaterd
+	ErrorDbOpening
 )
 
 func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
@@ -92,6 +94,13 @@ func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 		errorSystem = ErrorSystem{15, fmt.Sprintf("parsing the kube_alias file in this path:%s. %v", params[0], params[1])}
 	case ErrorK8sRestResourceWithoutNS:
 		errorSystem = ErrorSystem{16, fmt.Sprintf("getting the resource %v: %v", params[0], params[1])}
+	case ErrorSqlNotASelect:
+		errorSystem = ErrorSystem{17, fmt.Sprintf("the query is not a select: %s", params[0])}
+	case ErrorDbNotCreaterd:
+		errorSystem = ErrorSystem{18, fmt.Sprintf("creating the DB object: %v", params[0])}
+	case ErrorDbOpening:
+		errorSystem = ErrorSystem{18, fmt.Sprintf("opening the DB object %s: %v", params[0])}
+
 	}
 
 	errorSystem.errorMsg = fmt.Sprintf("error msg: %s\nerror code: %d", errorSystem.errorMsg, errorSystem.errorCode)

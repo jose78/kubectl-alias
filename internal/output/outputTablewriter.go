@@ -40,7 +40,7 @@ func PrintStdout(result database.SelectResult) {
 	for index, rowMap := range result.Rows {
 		row := []string{fmt.Sprintf("%d", index)}
 		for _, col := range result.Columns {
-			row = append(row, rowMap[col].(string))
+			row = append(row, fmt.Sprintf("%v", rowMap[col]))
 		}
 		data = append(data, row)
 	}

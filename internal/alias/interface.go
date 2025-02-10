@@ -1,5 +1,5 @@
 /*
-Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com) 
+Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -22,10 +22,17 @@ THE SOFTWARE.
 
 package alias
 
-import "context"
+import "github.com/jose78/kubectl-alias/internal/generic"
+
+
+
 
 
 // Command pattern to encapsulate an execution
 type Command interface {
-	Execute(context.Context)
+	Execute(generic.CommandContext)
 }
+
+
+
+

@@ -23,69 +23,15 @@ THE SOFTWARE.
 package service
 
 import (
-	"context"
-	"os"
-	"strings"
-
-	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/kubectl-alias/internal/alias"
-	"github.com/mitchellh/mapstructure"
-	"gopkg.in/yaml.v3"
+	"github.com/jose78/kubectl-alias/internal/generic"
 )
 
-func RunAlias(args []string) {
-	ctx := context.Background()
+func RunAlias(cmdCtx generic.CommandContext) {
 
-	ctx = context.WithValue(ctx, commons.CTE_NS, "")
-
-	if len(os.Args) > 2 {
-		ctx = context.WithValue(ctx, commons.CTX_KEY_ALIAS_ARGS, args)
-	}
-	ctx = context.WithValue(ctx, commons.CTX_KEY_ALIAS_NAME, os.Args[1])
-
-	aliasContent := LoadKubeAlias()
-	cmd := factoryCommand(aliasContent)
-	cmd.Execute(ctx)
+	aliasContent := alias.LoadKubeAlias()
+	cmd := alias.FactoryCommand(aliasContent)
+	cmd.Execute(cmdCtx)
 }
 
-type builderCommand func(map[string]any) alias.Command
 
-func factoryCommand(aliasContent map[string]any) alias.Command {
-
-	version, okVersionIsContained := aliasContent["version"]
-	if !okVersionIsContained {
-		commons.ErrorKubeAliasVersionNotFoud.BuildMsgError().KO()
-	}
-
-	var fn builderCommand
-	version = strings.TrimSpace(version.(string))
-	switch version {
-	case "v1":
-		fn = func(m map[string]any) alias.Command {
-			var alias alias.AliasDefV1
-			mapstructure.Decode(m, &alias)
-			return alias
-		}
-	}
-	return fn(aliasContent)
-}
-
-func LoadKubeAlias() map[string]any {
-
-	kubepath := os.Getenv(commons.ENV_VAR_KUBEALIAS_NAME)
-	if kubepath == "" {
-		commons.ErrorKubeAliasPathNotDefined.BuildMsgError().KO()
-	}
-
-	aliasByteConent, errReadingKubeAliasContent := os.ReadFile(kubepath)
-	if errReadingKubeAliasContent != nil {
-		commons.ErrorKubeAliasReadingFile.BuildMsgError(kubepath, errReadingKubeAliasContent).KO()
-	}
-
-	var result map[string]any
-	errParsingKubeAliasContent := yaml.Unmarshal(aliasByteConent, &result)
-	if errParsingKubeAliasContent != nil {
-		commons.ErrorKubeAliasParseFile.BuildMsgError(kubepath, errParsingKubeAliasContent)
-	}
-	return result
-}
