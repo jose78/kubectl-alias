@@ -2,25 +2,23 @@ package database
 
 import (
 	"fmt"
-
 	"strings"
-
-	"math/rand"
-	"time"
 
 	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/sqlparser"
+	"math/rand"
+	"time"
 )
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 const separatorLength = 8
 
-// generateStringSeparator genera una cadena aleatoria de caracteres para usar como separador.
+// generateSeparator genera una cadena aleatoria de caracteres para usar como separador.
 // Utiliza math/rand para la generación de números aleatorios.  Aunque rand.Seed está obsoleto,
 // math/rand sigue siendo aceptable para este caso de uso donde no se requiere seguridad
 // criptográfica.  Se usa un nuevo RandomSource para mayor control.
 // La longitud del separador se define mediante la constante separatorLength.
-func generateStringSeparator() string {
+func generateSeparator() string {
 	// Se crea una nueva fuente de aleatoriedad con la hora actual como semilla.
 	// Esto asegura que las cadenas generadas sean diferentes en cada ejecución.
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
@@ -46,12 +44,13 @@ func generateStringSeparator() string {
 // Returns:
 //   - A modified SQL query string with column references wrapped in `json_extract`.
 func ManipulateAST(query string, aliasToTable map[string]string) string {
-	separator := generateStringSeparator()
-	replacer := strings.NewReplacer(".", separator, "[", "open_______", "]", "close_______", "||", "+'"+separator+"'+")
-	query = replacer.Replace(query)
+	separator := generateSeparator()
+	query = strings.ReplaceAll(query, ".", separator)
+	query = strings.ReplaceAll(query, "[", "open_______")
+	query = strings.ReplaceAll(query, "]", "close_______")
 	stmt, err := sqlparser.Parse(query)
 	if err != nil {
-		commons.ErrorSqlNotASelect.BuildMsgError(query).KO()
+		return ""
 	}
 
 	visit := func(node sqlparser.SQLNode) (kontinue bool, err error) {
@@ -60,6 +59,8 @@ func ManipulateAST(query string, aliasToTable map[string]string) string {
 			colInfo := regenerateColInfo(strings.Split(col.Name.String(), separator), aliasToTable)
 			tableName := colInfo.tableName
 			columnName := colInfo.columnName
+
+			// Modificar el nombre de la columna para usar hisn()
 			col.Name = sqlparser.NewColIdent(
 				fmt.Sprintf("%sjson_extract(%s , '%s'%s)", separator, tableName, columnName, separator),
 			)
@@ -69,8 +70,11 @@ func ManipulateAST(query string, aliasToTable map[string]string) string {
 	sqlparser.Walk(visit, stmt)
 
 	modifiedQuery := sqlparser.String(stmt)
-	replacer = strings.NewReplacer("`"+separator, "", separator+")`", ")", "open_______", "[", "close_______", "]", "+ '"+separator+"' +", " || ")
-	modifiedQuery = replacer.Replace(modifiedQuery)
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, "`"+separator, "")
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, separator+")`", ")")
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, " + ", " || ")
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, "open_______" , "[")
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, "close_______" , "]")
 	return modifiedQuery
 }
 
@@ -121,9 +125,10 @@ func regenerateColInfo(colSplited []string, aliasToTable map[string]string) colI
 // Returns:
 //   - A map where the key is the table alias (or the table name if no alias is used),
 //     and the value is the actual table name.
-func FindTablesWithAliases(queryOriginal string) map[string]string {
-	replacer := strings.NewReplacer(".", "____", "[", "open_______", "]", "close_______")
-	query := replacer.Replace(queryOriginal)
+func FindTablesWithAliases(query string) map[string]string {
+	query = strings.ReplaceAll(query, ".", "____")
+	query = strings.ReplaceAll(query, "[", "open_______")
+	query = strings.ReplaceAll(query, "]", "close_______")
 	// Parsear la consulta a un AST
 	stmt, _ := sqlparser.Parse(query)
 	selectStmt, ok := stmt.(*sqlparser.Select)
