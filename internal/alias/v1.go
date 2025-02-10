@@ -57,7 +57,7 @@ func (alias AliasDefV1) Execute(ctx generic.CommandContext) {
 	mapObjects := k8s.GenerateMapObjects(k8sInfo)
 	k8sInfo.K8sResources = mapObjects
 
-	sqlSelect := database.UpdateQuery(aliasFiltered.SQL, aliasToTable)
+	sqlSelect := database.ManipulateAST(aliasFiltered.SQL, aliasToTable)
 	
 	dbObjetc := database.Load()
 	defer dbObjetc.Destroy()

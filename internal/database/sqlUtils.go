@@ -6,12 +6,90 @@ import (
 
 	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/sqlparser"
+	"math/rand"
+	"time"
 )
 
+const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+const separatorLength = 8
 
-func regenerateColInfo(col string, aliasToTable map[string]string) colInfo {
+// generateSeparator genera una cadena aleatoria de caracteres para usar como separador.
+// Utiliza math/rand para la generación de números aleatorios.  Aunque rand.Seed está obsoleto,
+// math/rand sigue siendo aceptable para este caso de uso donde no se requiere seguridad
+// criptográfica.  Se usa un nuevo RandomSource para mayor control.
+// La longitud del separador se define mediante la constante separatorLength.
+func generateSeparator() string {
+	// Se crea una nueva fuente de aleatoriedad con la hora actual como semilla.
+	// Esto asegura que las cadenas generadas sean diferentes en cada ejecución.
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	colSplited := strings.Split(col, "____")
+	b := make([]byte, separatorLength)
+	for i := range b {
+		b[i] = letters[r.Intn(len(letters))] // Usar el nuevo RandomSource
+	}
+	return "__________" + string(b) + "__________"
+}
+
+// ManipulateAST modifies the SQL query by transforming column references
+// to use the `json_extract` function in SQLite3, using the table name as the key.
+//
+// SQLite3's `json_extract` function is used to extract values from JSON columns efficiently.
+// It allows querying nested JSON fields directly within SQL queries.
+//
+// Parameters:
+//   - query: The original SQL query string to be modified.
+//   - aliasToTable: A map that associates table aliases with their actual table names.
+//     If a table has no alias, its name is used as the alias.
+//
+// Returns:
+//   - A modified SQL query string with column references wrapped in `json_extract`.
+func ManipulateAST(query string, aliasToTable map[string]string) string {
+	separator := generateSeparator()
+	query = strings.ReplaceAll(query, ".", separator)
+	query = strings.ReplaceAll(query, "[", "open_______")
+	query = strings.ReplaceAll(query, "]", "close_______")
+	stmt, err := sqlparser.Parse(query)
+	if err != nil {
+		return ""
+	}
+
+	visit := func(node sqlparser.SQLNode) (kontinue bool, err error) {
+		if col, ok := node.(*sqlparser.ColName); ok {
+
+			colInfo := regenerateColInfo(strings.Split(col.Name.String(), separator), aliasToTable)
+			tableName := colInfo.tableName
+			columnName := colInfo.columnName
+
+			// Modificar el nombre de la columna para usar hisn()
+			col.Name = sqlparser.NewColIdent(
+				fmt.Sprintf("%sjson_extract(%s , '%s'%s)", separator, tableName, columnName, separator),
+			)
+		}
+		return true, nil
+	}
+	sqlparser.Walk(visit, stmt)
+
+	modifiedQuery := sqlparser.String(stmt)
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, "`"+separator, "")
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, separator+")`", ")")
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, " + ", " || ")
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, "open_______" , "[")
+	modifiedQuery = strings.ReplaceAll(modifiedQuery, "close_______" , "]")
+	return modifiedQuery
+}
+
+// regenerateColInfo reconstructs column information from a JSON path and table alias mapping.
+//
+// Parameters:
+//   - colSplited: A slice containing the JSON path split by dots, representing the column hierarchy.
+//   - aliasToTable: A map that associates table aliases with their actual table names.
+//     If a table has no alias, its name is used as the alias.
+//
+// Returns:
+//
+//	A colInfo struct containing the column name and the corresponding table name.
+func regenerateColInfo(colSplited []string, aliasToTable map[string]string) colInfo {
+
 	qualifier := ""
 	name := ""
 	if len(aliasToTable) != 1 {
@@ -36,172 +114,21 @@ func regenerateColInfo(col string, aliasToTable map[string]string) colInfo {
 	return colInfo{columnName, tableName}
 }
 
-
-
-func UpdateQuery(query string, aliasToTable map[string]string) string {
-
-	query = strings.ReplaceAll(query, ".", "____")
-	// Parsear la consulta a un AST
-	stmt, _ := sqlparser.Parse(query)
-
-	updateSelect := func(aliasToTable map[string]string, selectStmt *sqlparser.Select) {
-		for i, expr := range selectStmt.SelectExprs {
-			aliasedExpr, ok := expr.(*sqlparser.AliasedExpr)
-			if !ok {
-				continue
-			}
-
-			colName, ok := aliasedExpr.Expr.(*sqlparser.ColName)
-			if !ok {
-				continue
-			}
-
-			col := regenerateColInfo(colName.Name.String(), aliasToTable)
-			tableName := col.tableName
-			columnName := col.columnName
-
-			aliasedExpr.Expr = &sqlparser.FuncExpr{
-				Name: sqlparser.NewColIdent("json_extract"),
-				Exprs: sqlparser.SelectExprs{
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(tableName)},
-					},
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(columnName)},
-					},
-				},
-			}
-
-			selectStmt.SelectExprs[i] = aliasedExpr
-		}
-	}
-
-	updateWhere := func(aliasToTable map[string]string, selectStmt *sqlparser.Select) {
-		if selectStmt.Where == nil {
-			return
-		}
-
-		updaCol := func(binaryExpr *sqlparser.Expr) {
-
-			colName, _ := (*binaryExpr).(*sqlparser.ColName)
-
-			col := regenerateColInfo(colName.Name.String(), aliasToTable)
-			tableName := col.tableName
-			columnName := col.columnName
-
-			*binaryExpr = &sqlparser.FuncExpr{
-				Name: sqlparser.NewColIdent("json_extract"),
-				Exprs: sqlparser.SelectExprs{
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(tableName)},
-					},
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(columnName)},
-					},
-				},
-			}
-		}
-		// Loop through the conditions of the WHERE clause
-		sqlparser.Walk(func(node sqlparser.SQLNode) (kontinue bool, err error) {
-			binaryExpr, ok := node.(*sqlparser.ComparisonExpr)
-			if !ok {
-				return true, nil
-			}
-
-			_, ok = binaryExpr.Left.(*sqlparser.ColName)
-			if ok {
-				updaCol(&binaryExpr.Left)
-			}
-
-			_, ok = binaryExpr.Right.(*sqlparser.ColName)
-			if ok {
-				updaCol(&binaryExpr.Right)
-			}
-
-			return true, nil
-		}, selectStmt.Where.Expr)
-	}
-
-	updateGroupBy := func(aliasToTable map[string]string, selectStmt *sqlparser.Select) {
-		for i, expr := range selectStmt.GroupBy {
-			colName, ok := expr.(*sqlparser.ColName)
-			if !ok {
-				continue
-			}
-
-			col := regenerateColInfo(colName.Name.String(), aliasToTable)
-			tableName := col.tableName
-			columnName := col.columnName
-
-			selectStmt.GroupBy[i] = &sqlparser.FuncExpr{
-				Name: sqlparser.NewColIdent("json_extract"),
-				Exprs: sqlparser.SelectExprs{
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(tableName)},
-					},
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(columnName)},
-					},
-				},
-			}
-		}
-	}
-
-	updateOrderBy := func(aliasToTable map[string]string, selectStmt *sqlparser.Select) {
-		for i, order := range selectStmt.OrderBy {
-			colName, ok := order.Expr.(*sqlparser.ColName)
-			if !ok {
-				continue
-			}
-
-			col := regenerateColInfo(colName.Name.String(), aliasToTable)
-			tableName := col.tableName
-			columnName := col.columnName
-
-			selectStmt.OrderBy[i].Expr = &sqlparser.FuncExpr{
-				Name: sqlparser.NewColIdent("json_extract"),
-				Exprs: sqlparser.SelectExprs{
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(tableName)},
-					},
-					&sqlparser.AliasedExpr{
-						Expr: &sqlparser.ColName{Name: sqlparser.NewColIdent(columnName)},
-					},
-				},
-			}
-		}
-	}
-
-	selectStmt, ok := stmt.(*sqlparser.Select)
-	if !ok {
-		commons.ErrorSqlNotASelect.BuildMsgError(query).KO()
-	}
-
-	updateSelect(aliasToTable, selectStmt)
-	updateWhere(aliasToTable, selectStmt)
-	updateGroupBy(aliasToTable, selectStmt)
-	updateOrderBy(aliasToTable, selectStmt)
-	modifiedQuery := sqlparser.String(stmt)
-	modifiedQuery = strings.ReplaceAll(modifiedQuery, "`", "'")
-
-	keywords := []string{
-		"select ", "from ", "where ", "join ", " on ", "group by ", "order by ", "having ",
-		"set", "limit", "offset",
-	}
-
-	// Reemplazar cada palabra clave por su versión en mayúsculas
-	for _, keyword := range keywords {
-		upper := strings.ToUpper(keyword)
-		modifiedQuery = strings.ReplaceAll(modifiedQuery, keyword, upper)
-	}
-
-	return modifiedQuery
-}
-
-
-// Find the tables used within the from
+// FindTablesWithAliases extracts table names and their corresponding aliases from a SQL query.
+//
+// It analyzes the FROM clause, storing table aliases as keys in the returned map.
+// If a table has no alias, its actual name is used as the key.
+//
+// Parameters:
+//   - query: The SQL query string to analyze.
+//
+// Returns:
+//   - A map where the key is the table alias (or the table name if no alias is used),
+//     and the value is the actual table name.
 func FindTablesWithAliases(query string) map[string]string {
 	query = strings.ReplaceAll(query, ".", "____")
+	query = strings.ReplaceAll(query, "[", "open_______")
+	query = strings.ReplaceAll(query, "]", "close_______")
 	// Parsear la consulta a un AST
 	stmt, _ := sqlparser.Parse(query)
 	selectStmt, ok := stmt.(*sqlparser.Select)

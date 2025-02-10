@@ -19,19 +19,30 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
 */
+package database
 
-package service
+import "testing"
 
-import (
-	"github.com/jose78/kubectl-alias/internal/alias"
-	"github.com/jose78/kubectl-alias/internal/generic"
-)
-
-func RunAlias(cmdCtx generic.CommandContext) {
-
-	aliasContent := alias.LoadKubeAlias()
-	cmd := alias.FactoryCommand(aliasContent)
-	cmd.Execute(cmdCtx)
+func TestWrapColumnsWithHisn(t *testing.T) {
+	simple_select := "SELECT  ns.metadata.perconte.name AS ns_name,  p.metadata.name AS pod_name FROM ns, pod AS p WHERE  ns.metadata.namespace LIKE  'MEGANITO' +  p.metadata.name;"
+	type args struct {
+		query string
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    string
+		wantErr bool
+	}{
+		{"Simple query", args{query: simple_select}, "", false  },
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := ManipulateAST(tt.args.query , FindTablesWithAliases(tt.args.query))
+			
+			if got != tt.want {
+				t.Errorf("ManipulateAST() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
-
-

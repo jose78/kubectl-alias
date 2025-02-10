@@ -13,7 +13,7 @@
             "args": ["deploy"],
             
             "env": {
-                "KUBEALIAS": "/home/jose/ws/kubectl-alias/resources/kube_alias.yml"
+                "KUBEALIAS": "${workspaceFolder}/resources/kube_alias.yml"
             }
         },{
             "name": "Help Launch Package",
@@ -23,7 +23,17 @@
             "program": "${fileDirname}",
             "args": ["pods -h"],
             "env": {
-                "KUBEALIAS": "/home/jose/ws/kubectl-alias/resources/kube_alias.yml"
+                "KUBEALIAS": "${workspaceFolder}/resources/kube_alias.yml"
+            }
+        },{
+            "name": "Events Launch Package",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${fileDirname}",
+            "args": ["events"],
+            "env": {
+                "KUBEALIAS": "${workspaceFolder}/resources/kube_alias.yml"
             }
         },{
             "name": "PODS Launch Package",
@@ -33,7 +43,7 @@
             "program": "${fileDirname}",
             "args": ["pods"],
             "env": {
-                "KUBEALIAS": "/home/jose/ws/kubectl-alias/resources/kube_alias.yml"
+                "KUBEALIAS": "${workspaceFolder}/resources/kube_alias.yml"
             }
         }
     ]

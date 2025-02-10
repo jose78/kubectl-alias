@@ -113,7 +113,7 @@ func (conf dbConf) Insert( k8sValues []unstructured.Unstructured, tbl string) {
 
 }
 
-
+// colInfo represents column information, including its name and the table it belongs to.
 type colInfo struct {
 	columnName string
 	tableName  string

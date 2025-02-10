@@ -28,10 +28,14 @@ import (
 
 	"github.com/jose78/go-collections"
 	"github.com/jose78/kubectl-alias/commons"
+	"github.com/jose78/kubectl-alias/internal/alias"
 	"github.com/jose78/kubectl-alias/internal/generic"
 	"github.com/jose78/kubectl-alias/service"
 	"github.com/spf13/cobra"
 )
+
+
+var Version = "empty"
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -57,10 +61,10 @@ you can tailor the CLI to suit your specific Kubernetes query needs.`,
 }
 
 
-var (
-	kubeconfig *string 
-    namespace *string 
-)
+//var (
+//	kubeconfig *string 
+//    namespace *string 
+//)
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -73,12 +77,22 @@ func Execute() {
 
 func init() {
 
-	contentKubeAlias := service.LoadKubeAlias()
+	contentKubeAlias := alias.LoadKubeAlias()
 
 	aliases, okAliases := contentKubeAlias["aliases"]
 	if !okAliases {
 		return
 	}
+
+	// Add the version command
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Prints the application version",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("Kubectl-alias version:", Version)
+		},
+	})
+
 
 	for name, value := range aliases.(map[string]any) {
 		cmdCtx := generic.CommandContext{SubCommand: name}
@@ -103,14 +117,14 @@ func init() {
 			Long:  long,
 			Args:  cobra.ExactArgs(sizeArgs),
 			Run: func(cmd *cobra.Command, args []string) {
-				flags := map[commons.KeyContext]string{commons.CTE_KUBECONFIG: *kubeconfig, commons.CTE_NS: *namespace}
+				flags := map[commons.KeyContext]string{commons.CTE_KUBECONFIG: "", commons.CTE_NS: ""}
 				cmdCtx.Flags = flags
 				cmdCtx.Args = args
 				service.RunAlias(cmdCtx)
 			},
 		}
 		rootCmd.AddCommand(subCmd)
-		kubeconfig = rootCmd.PersistentFlags().StringP("kubeconfig", "k", "", "Specifies the path to the Kubernetes configuration file (default is $HOME/.kube/config).")
-		namespace = rootCmd.PersistentFlags().StringP("namespace", "n", "", "Specifies the default Kubernetes namespace to use.")
+		//kubeconfig = rootCmd.PersistentFlags().StringP("kubeconfig", "k", "", "Specifies the path to the Kubernetes configuration file (default is $HOME/.kube/config).")
+		//namespace = rootCmd.PersistentFlags().StringP("namespace", "n", "", "Specifies the default Kubernetes namespace to use.")
 	}
 }
