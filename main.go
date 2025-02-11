@@ -21,8 +21,16 @@ THE SOFTWARE.
 */
 package main
 
-import "github.com/jose78/kubectl-alias/cmd"
+import (
+	"fmt"
+
+	"github.com/jose78/kubectl-alias/cmd"
+)
+
+
+var Version string
 
 func main() {
-	cmd.Execute()
+	fmt.Println(Version)
+	cmd.Execute(Version)
 }

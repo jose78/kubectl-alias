@@ -34,9 +34,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-
-var Version = "empty"
-
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "kubectl-alias",
@@ -55,20 +52,21 @@ kubectl alias subCommand arg1 arg2... argN
 
 By defining subcommands (with or without arguments) in the KUBEALIAS configuration file, 
 you can tailor the CLI to suit your specific Kubernetes query needs.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
 }
-
-
-//var (
-//	kubeconfig *string 
-//    namespace *string 
-//)
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(version string) {
+
+	// Add the version command
+	rootCmd.AddCommand(&cobra.Command{
+		Use:   "version",
+		Short: "Prints the application version",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println("Kubectl-alias version:", version)
+		},
+	})
+
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
@@ -76,24 +74,11 @@ func Execute() {
 }
 
 func init() {
-
 	contentKubeAlias := alias.LoadKubeAlias()
-
 	aliases, okAliases := contentKubeAlias["aliases"]
 	if !okAliases {
 		return
 	}
-
-	// Add the version command
-	rootCmd.AddCommand(&cobra.Command{
-		Use:   "version",
-		Short: "Prints the application version",
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("Kubectl-alias version:", Version)
-		},
-	})
-
-
 	for name, value := range aliases.(map[string]any) {
 		cmdCtx := generic.CommandContext{SubCommand: name}
 		mapperArg := func(value string) any {
