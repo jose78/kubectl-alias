@@ -45,9 +45,8 @@ func generateSeparator() string {
 //   - A modified SQL query string with column references wrapped in `json_extract`.
 func ManipulateAST(query string, aliasToTable map[string]string) string {
 	separator := generateSeparator()
-	query = strings.ReplaceAll(query, ".", separator)
-	query = strings.ReplaceAll(query, "[", "open_______")
-	query = strings.ReplaceAll(query, "]", "close_______")
+	replacer := strings.NewReplacer(".", separator ,"[", "open_______" ,"]", "close_______" , "||" , "+'"+separator+"'+")
+	query = replacer.Replace(query)
 	stmt, err := sqlparser.Parse(query)
 	if err != nil {
 		return ""
@@ -70,11 +69,13 @@ func ManipulateAST(query string, aliasToTable map[string]string) string {
 	sqlparser.Walk(visit, stmt)
 
 	modifiedQuery := sqlparser.String(stmt)
-	modifiedQuery = strings.ReplaceAll(modifiedQuery, "`"+separator, "")
-	modifiedQuery = strings.ReplaceAll(modifiedQuery, separator+")`", ")")
-	modifiedQuery = strings.ReplaceAll(modifiedQuery, " + ", " || ")
-	modifiedQuery = strings.ReplaceAll(modifiedQuery, "open_______" , "[")
-	modifiedQuery = strings.ReplaceAll(modifiedQuery, "close_______" , "]")
+
+	replacer = strings.NewReplacer("`"+separator, "" , separator+")`", ")" , " + ", " || " , "open_______" , "[" , "close_______" , "]", "+ '"+separator+"' +", "||")
+	                                                                                                                                      
+
+	fmt.Print(modifiedQuery)
+	modifiedQuery = replacer.Replace(modifiedQuery)
+	fmt.Print(modifiedQuery)
 	return modifiedQuery
 }
 
@@ -126,9 +127,13 @@ func regenerateColInfo(colSplited []string, aliasToTable map[string]string) colI
 //   - A map where the key is the table alias (or the table name if no alias is used),
 //     and the value is the actual table name.
 func FindTablesWithAliases(query string) map[string]string {
-	query = strings.ReplaceAll(query, ".", "____")
-	query = strings.ReplaceAll(query, "[", "open_______")
-	query = strings.ReplaceAll(query, "]", "close_______")
+	separator := generateSeparator()
+	replacer := strings.NewReplacer(".", separator ,"[", "open_______" ,"]", "close_______" , "||" , "+'"+separator+"'+")
+
+
+	fmt.Println(query)
+	query = replacer.Replace(query)
+	fmt.Println(query)
 	// Parsear la consulta a un AST
 	stmt, _ := sqlparser.Parse(query)
 	selectStmt, ok := stmt.(*sqlparser.Select)
