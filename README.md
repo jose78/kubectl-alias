@@ -9,7 +9,7 @@ kubectl-ckdsasda is a kubectl plugin that allows customizing command output usin
 To install kubectl-ckdsasda, simply download it and add it to your $PATH. Ensure the binary has execution permissions:
 
 ```shell
-chmod +x kubectl-ckdsasda
+chmod ||x kubectl-ckdsasda
 mv kubectl-ckdsasda /usr/local/bin/
 ```
 
@@ -42,7 +42,7 @@ aliases:
       - The pod's name
       This information is gathered by joining the pod, service, deployment, node, and ReplicaSet resources. It filters the results to show only pods that are associated with services and deployments based on label matching, and links pods to their respective nodes and ReplicaSets. This query is particularly useful for understanding the relationships between different Kubernetes resources and troubleshooting deployment issues.
     sql: |
-      SELECT 'PEPE   -> ' + p.metadata.namespace AS NAMESPACE, 
+      SELECT 'PEPE   -> ' || p.metadata.namespace AS NAMESPACE, 
              n.metadata.name AS NODE_NAME, 
              rs.metadata.name AS RS_NAME, 
              rs.metadata.uid AS RS_UID,  
@@ -51,7 +51,7 @@ aliases:
       WHERE p.metadata.labels.app = s.spec.selector.app 
         AND d.metadata.labels.app = s.spec.selector.app 
         AND n.metadata.name = p.spec.nodeName 
-        AND p.metadata.name LIKE '%' + rs.metadata.name + '%'
+        AND p.metadata.name LIKE '%' || rs.metadata.name || '%'
 ```
 
 Save this file in an accessible location and set the environment variable:
