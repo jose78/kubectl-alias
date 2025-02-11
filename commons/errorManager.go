@@ -99,7 +99,7 @@ func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 	case ErrorDbNotCreaterd:
 		errorSystem = ErrorSystem{18, fmt.Sprintf("creating the DB object: %v", params[0])}
 	case ErrorDbOpening:
-		errorSystem = ErrorSystem{18, fmt.Sprintf("opening the DB object %s: %v", params[0])}
+		errorSystem = ErrorSystem{18, fmt.Sprintf("opening the DB object: %v", params[0])}
 
 	}
 

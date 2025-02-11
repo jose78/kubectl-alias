@@ -30,6 +30,25 @@ aliases:
            p.status.containerStatuses[0].state.waiting.message as pod_Status_msg
            FROM event e, pod p
            WHERE e.regarding.name = p.metadata.name
+   pod:
+      short: Show the description of each pod and linked service.
+      args:
+         - POD_NAME
+      long: |
+        This complex query joins multiple Kubernetes resources to provide a detailed view of the pod ecosystem. It returns:
+        The pod's namespace, prefixed with 'PEPE -> '
+        The name of the node where the pod is running
+        The name and UID of the ReplicaSet associated with the pod
+        The pod's name
+        This information is gathered by joining the pod, service, deployment, node, and ReplicaSet resources. It filters the results to show only pods that are associated with services and deployments based on label matching, and links pods to their respective nodes and ReplicaSets. This query is particularly useful for understanding the relationships between different Kubernetes resources and troubleshooting deployment issues.
+      sql: |
+          SELECT 'PEPE   -> ' || p.metadata.namespace as NAMESPACE , n.metadata.name as NODE_NAME , rs.metadata.name RS_NAME, rs.metadata.uid RS_UID,  p.metadata.name POD_NAME
+          FROM 
+              pod p, svc s, deploy d , node n, rs 
+          where p.metadata.labels.app = s.spec.selector.app 
+          and d.metadata.labels.app = s.spec.selector.app  
+          AND n.metadata.name = p.spec.nodeName and p.metadata.name like '%' || rs.metadata.name || '%' 
+          and  p.metadata.name like '% POD_NAME %'
    pods:
       short: Show the description of each pod and linked service.
       long: |

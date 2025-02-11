@@ -34,8 +34,6 @@ import "github.com/jose78/kubectl-alias/commons"
 // - Flags: A map storing flag names as keys and their corresponding values,
 //          representing options or settings provided during execution.
 type CommandContext struct {
-	SubCommand string
 	Args       []string
-	Flags      map[commons.KeyContext]string
+	Flags      map[commons.KeyContext]*string
 } 
-

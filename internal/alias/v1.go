@@ -23,18 +23,23 @@ THE SOFTWARE.
 package alias
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/jose78/go-collections"
 	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/kubectl-alias/internal/database"
 	"github.com/jose78/kubectl-alias/internal/generic"
 	"github.com/jose78/kubectl-alias/internal/k8s"
 	"github.com/jose78/kubectl-alias/internal/output"
+	"github.com/spf13/cobra"
 )
 
-
 type AliasV1 struct {
-	Name string `yaml:"name"`
-	SQL  string `yaml:"sql"`
+	Short string   `yaml:"short"`
+	Long  string   `yaml:"long"`
+	Args  []string `yaml:"args"`
+	SQL   string   `yaml:"sql"`
 }
 
 type AliasDefV1 struct {
@@ -43,29 +48,70 @@ type AliasDefV1 struct {
 }
 
 // Implementation of interface Command for version V1 of alias functionality
-func (alias AliasDefV1) Execute(ctx generic.CommandContext) {
-	aliasName := ctx.SubCommand
-	aliasFiltered, okAlias := alias.Aliases[aliasName]
-	if !okAlias {
-		commons.ErrorKubeAliasNotFoud.BuildMsgError(aliasName).KO()
+func (aliasFiltered AliasV1) execute(ctx generic.CommandContext) {
+
+
+	sql := aliasFiltered.SQL
+	if len(aliasFiltered.Args) >0 {
+		for index := 0; index <  len(aliasFiltered.Args); index ++{
+			sql = strings.ReplaceAll(sql, aliasFiltered.Args[index], ctx.Args[index])
+		}
 	}
-	aliasToTable := database.FindTablesWithAliases(aliasFiltered.SQL)
+
+	aliasToTable := database.FindTablesWithAliases(sql )
 	tables := []string{}
 	collections.Map(func(touple collections.Touple) any { return touple.Value }, aliasToTable, &tables)
-	
-	k8sInfo := k8s.K8sInfo{ PathK8sConfig: ctx.Flags[commons.CTE_KUBECONFIG],  NamespaceDefault: ctx.Flags[commons.CTE_NS]}
+
+	k8sInfo := k8s.K8sInfo{PathK8sConfig: *ctx.Flags[commons.CTE_KUBECONFIG], NamespaceDefault: *ctx.Flags[commons.CTE_NS]}
 	mapObjects := k8s.GenerateMapObjects(k8sInfo)
 	k8sInfo.K8sResources = mapObjects
 
-	sqlSelect := database.ManipulateAST(aliasFiltered.SQL, aliasToTable)
-	
+	sqlSelect := database.ManipulateAST(sql , aliasToTable)
+
 	dbObjetc := database.Load()
 	defer dbObjetc.Destroy()
 	for _, table := range tables {
-		jsonContent := k8s.RetrieveK8sObjects(k8sInfo , table)
+		jsonContent := k8s.RetrieveK8sObjects(k8sInfo, table)
 		dbObjetc.CreateTable(table)
 		dbObjetc.Insert(jsonContent, table)
 	}
-	rows := dbObjetc.EvaluateSelect( sqlSelect)
+	rows := dbObjetc.EvaluateSelect(sqlSelect)
 	output.PrintStdout(rows)
+}
+
+func (alias AliasDefV1) GenerateDoc(ctx generic.CommandContext) []*cobra.Command {
+
+	result := []*cobra.Command{}
+
+	for name, value := range alias.Aliases {
+		mapperArg := func(value string) any {
+			return fmt.Sprintf("[%s]", value)
+		}
+		use := name
+		sizeArgs := 0
+
+		if len(value.Args) > 0 {
+			sizeArgs = len(value.Args)
+			var useList []string
+			collections.Map(mapperArg, value.Args, &useList)
+			use = fmt.Sprintf("%s %s ", name, strings.Join(useList, " "))
+		}
+		var subCmd = &cobra.Command{
+			Use:   use,
+			Short: value.Short,
+			Long:  value.Long,
+			Args:  cobra.ExactArgs(sizeArgs),
+			Run: func(cmd *cobra.Command, args []string) {
+				aliasFiltered, okAlias := alias.Aliases[name]
+				if !okAlias {
+					commons.ErrorKubeAliasNotFoud.BuildMsgError(name).KO()
+				}
+				ctx.Args = args
+				aliasFiltered.execute(ctx)
+			},
+		}
+		result = append(result, subCmd)
+	}
+
+	return result
 }

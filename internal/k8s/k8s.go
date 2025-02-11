@@ -114,7 +114,7 @@ func createConfiguration(pathKubeCondif string) K8sConf {
 	}
 	k8sConf := K8sConf{}
 	if restConf, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath); err != nil {
-		commons.ErrorK8sRestConfig.BuildMsgError(kubeconfigPath).KO()
+		commons.ErrorK8sRestConfig.BuildMsgError(kubeconfigPath, err).KO()
 	} else {
 		k8sConf.restConf = restConf
 	}

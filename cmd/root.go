@@ -24,13 +24,10 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"strings"
 
-	"github.com/jose78/go-collections"
 	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/kubectl-alias/internal/alias"
 	"github.com/jose78/kubectl-alias/internal/generic"
-	"github.com/jose78/kubectl-alias/service"
 	"github.com/spf13/cobra"
 )
 
@@ -67,49 +64,24 @@ func Execute(version string) {
 		},
 	})
 
+	flags := map[commons.KeyContext]*string{commons.CTE_KUBECONFIG: kubeconfig , commons.CTE_NS: namespace}
+	ctx:= generic.CommandContext{Flags:  flags}
+	contentKubeAlias := alias.LoadKubeAlias()
+	lstCobraCmd :=  alias.FactoryAlias(contentKubeAlias).GenerateDoc(ctx)
+	for _ , item := range lstCobraCmd{
+		rootCmd.AddCommand(item)
+	}
+
 	err := rootCmd.Execute()
 	if err != nil {
 		os.Exit(1)
 	}
 }
 
+var kubeconfig *string
+var namespace *string
+
 func init() {
-	contentKubeAlias := alias.LoadKubeAlias()
-	aliases, okAliases := contentKubeAlias["aliases"]
-	if !okAliases {
-		return
-	}
-	for name, value := range aliases.(map[string]any) {
-		cmdCtx := generic.CommandContext{SubCommand: name}
-		mapperArg := func(value string) any {
-			return fmt.Sprintf("[%s]", strings.ToUpper(strings.ReplaceAll(value, " ", "_")))
-		}
-		item := value.(map[string]any)
-		short := fmt.Sprintf("%s", item["short"])
-		long := fmt.Sprintf("%s", item["long"])
-		use := name
-		sizeArgs := 0
-		args, okArgs := item["args"]
-		if okArgs {
-			sizeArgs = len(args.([]string))
-			var useList []string
-			collections.Map(mapperArg, args.([]string), &useList)
-			use = fmt.Sprintf("%s %s ", name, strings.Join(useList, " "))
-		}
-		var subCmd = &cobra.Command{
-			Use:   use,
-			Short: short,
-			Long:  long,
-			Args:  cobra.ExactArgs(sizeArgs),
-			Run: func(cmd *cobra.Command, args []string) {
-				flags := map[commons.KeyContext]string{commons.CTE_KUBECONFIG: "", commons.CTE_NS: ""}
-				cmdCtx.Flags = flags
-				cmdCtx.Args = args
-				service.RunAlias(cmdCtx)
-			},
-		}
-		rootCmd.AddCommand(subCmd)
-		//kubeconfig = rootCmd.PersistentFlags().StringP("kubeconfig", "k", "", "Specifies the path to the Kubernetes configuration file (default is $HOME/.kube/config).")
-		//namespace = rootCmd.PersistentFlags().StringP("namespace", "n", "", "Specifies the default Kubernetes namespace to use.")
-	}
+	kubeconfig = rootCmd.PersistentFlags().StringP("kubeconfig", "k", "", "Specifies the path to the Kubernetes configuration file (default is $HOME/.kube/config).")
+	namespace = rootCmd.PersistentFlags().StringP("namespace", "n", "", "Specifies the default Kubernetes namespace to use.")
 }
