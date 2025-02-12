@@ -45,7 +45,8 @@ func generateSeparator() string {
 //   - A modified SQL query string with column references wrapped in `json_extract`.
 func ManipulateAST(query string, aliasToTable map[string]string) string {
 	separator := generateSeparator()
-	replacer := strings.NewReplacer(".", separator ,"[", "open_______" ,"]", "close_______" , "||" , "+'"+separator+"'+")
+	separatorConcat := fmt.Sprintf(" + '__________%s__________' + ", generateSeparator())
+	replacer := strings.NewReplacer(".", separator ,"[", "open_______" ,"]", "close_______" , "||" , separatorConcat)
 	query = replacer.Replace(query)
 	stmt, err := sqlparser.Parse(query)
 	if err != nil {
@@ -70,7 +71,7 @@ func ManipulateAST(query string, aliasToTable map[string]string) string {
 
 	modifiedQuery := sqlparser.String(stmt)
 
-	replacer = strings.NewReplacer("`"+separator, "" , separator+")`", ")" , " + ", " || " , "open_______" , "[" , "close_______" , "]", "+ '"+separator+"' +", "||")
+	replacer = strings.NewReplacer("`"+separator, "" , separator+")`", ")"  , "open_______" , "[" , "close_______" , "]", separatorConcat, " || ")
 	                                                                                                                                      
 
 	fmt.Print(modifiedQuery)
@@ -127,8 +128,12 @@ func regenerateColInfo(colSplited []string, aliasToTable map[string]string) colI
 //   - A map where the key is the table alias (or the table name if no alias is used),
 //     and the value is the actual table name.
 func FindTablesWithAliases(query string) map[string]string {
+
 	separator := generateSeparator()
-	replacer := strings.NewReplacer(".", separator ,"[", "open_______" ,"]", "close_______" , "||" , "+'"+separator+"'+")
+	separatorConcat := fmt.Sprintf(" + '__________%s__________' + ", separator)
+
+
+	replacer := strings.NewReplacer(".", separator ,"[", "open_______" ,"]", "close_______" , "||" , separatorConcat)
 
 
 	fmt.Println(query)
