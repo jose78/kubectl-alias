@@ -31,6 +31,5 @@ import (
 var Version string
 
 func main() {
-	fmt.Println(Version)
 	cmd.Execute(Version)
 }

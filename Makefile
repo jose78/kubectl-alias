@@ -1,5 +1,4 @@
 APP_NAME := kubectl-alias
-OUTPUT_NAME := kubectl-alias  # Final binary name inside ZIP
 VERSION  := $(shell cat VERSION)
 BUILD_DIR := dist
 LDFLAGS := -X main.Version=$(VERSION) -s -w
@@ -32,23 +31,17 @@ build: ## Build binaries for all platforms
 	@echo "Building binaries..."
 	@mkdir -p $(BUILD_DIR)
 	@for platform in $(PLATFORMS); do \
-		OS=$${platform%/*}; ARCH=$${platform#*/}; \
-		EXT=""; \
-		if [ "$${OS}" = "windows" ]; then EXT=".exe"; fi; \
-		GOOS=$${OS} GOARCH=$${ARCH} \
-		go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(OUTPUT_NAME)$${EXT} main.go; \
-		mv $(BUILD_DIR)/$(OUTPUT_NAME)$${EXT} $(BUILD_DIR)/$(OUTPUT_NAME)-$${OS}-$${ARCH}$${EXT}; \
+		GOOS=$${platform%/*} GOARCH=$${platform#*/} \
+		go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(APP_NAME)-$${platform%/*}-$${platform#*/} main.go; \
 	done
 
 package: build ## Package binaries into zip/tar.gz
 	@echo "Packaging binaries..."
 	@for platform in $(PLATFORMS); do \
 		OS=$${platform%/*}; ARCH=$${platform#*/}; \
-		EXT=""; \
-		if [ "$${OS}" = "windows" ]; then EXT=".exe"; fi; \
-		FILENAME="$(OUTPUT_NAME)-$(VERSION)-$${OS}-$${ARCH}"; \
+		FILENAME="$(APP_NAME)-$(VERSION)-$${OS}-$${ARCH}"; \
 		mkdir -p $(BUILD_DIR)/$${FILENAME}; \
-		cp $(BUILD_DIR)/$(OUTPUT_NAME)-$${OS}-$${ARCH}$${EXT} $(BUILD_DIR)/$${FILENAME}/$(OUTPUT_NAME)$${EXT}; \
+		cp $(BUILD_DIR)/$(APP_NAME)-$${OS}-$${ARCH} $(BUILD_DIR)/$${FILENAME}/$(APP_NAME); \
 		if [ "$${OS}" = "windows" ]; then \
 			zip -j $(BUILD_DIR)/$${FILENAME}.zip $(BUILD_DIR)/$${FILENAME}/*; \
 		else \
@@ -63,3 +56,4 @@ clean: ## Clean build artifacts
 
 help: ## Show available commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+
