@@ -39,8 +39,9 @@ jobs:
       - name: Run tests
         run: make test
 
+
       - name: Package binaries
-        run: make 
+        run: make package
 
       - name: Create new GitHub tag
         run: |
