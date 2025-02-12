@@ -2,14 +2,12 @@ name: Release
 
 on:
   push:
-    tags:
-      - "v*"
-
-permissions:
-  contents: write
+    branches:
+      - main  # Trigger only on changes to the main branch
+      - feat/actions
 
 jobs:
-  build:
+  release:
     name: Build and Release
     runs-on: ubuntu-latest
 
@@ -17,21 +15,49 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Read version from file
+        id: version
+        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+
+      - name: Check if tag already exists
+        id: check_tag
+        run: |
+          TAG_EXISTS=$(git ls-remote --tags origin v${{ env.VERSION }} | wc -l)
+          if [ "$TAG_EXISTS" -ne "0" ]; then
+            echo "❌ ERROR: Tag v${{ env.VERSION }} already exists. Overwriting tags/releases is not allowed."
+            exit 1
+          fi
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: stable
+          go-version: '1.21'  # Adjust if necessary
 
-      - name: Read version from file
-        run: echo "VERSION=$(cat VERSION)" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: make deps
+
+      - name: Run tests
+        run: make test
 
       - name: Build binaries
+        run: make build
+
+      - name: Package binaries
         run: make package
 
-      - name: Create release
-        uses: softprops/action-gh-release@v1
+      - name: Create new GitHub tag
+        run: |
+          git tag v${{ env.VERSION }}
+          git push origin v${{ env.VERSION }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          body: "Automated release for version ${{ github.ref_name }}"
-          files: dist/kubectl-alias-*
+          tag_name: v${{ env.VERSION }}
+          name: Release v${{ env.VERSION }}
+          body: |
+            🚀 New release v${{ env.VERSION }}!
+            - Built from `main`
+          files: dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
