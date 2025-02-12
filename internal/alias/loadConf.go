@@ -30,9 +30,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type builderCommand func(map[string]any) Command
+type builderCommand func(map[string]any) Alias
 
-func FactoryCommand(aliasContent map[string]any) Command {
+func FactoryAlias(aliasContent map[string]any) Alias {
 
 	version, okVersionIsContained := aliasContent["version"]
 	if !okVersionIsContained {
@@ -43,7 +43,7 @@ func FactoryCommand(aliasContent map[string]any) Command {
 	version = strings.TrimSpace(version.(string))
 	switch version {
 	case "v1":
-		fn = func(m map[string]any) Command {
+		fn = func(m map[string]any) Alias {
 			var alias AliasDefV1
 			mapstructure.Decode(m, &alias)
 			return alias
@@ -51,8 +51,6 @@ func FactoryCommand(aliasContent map[string]any) Command {
 	}
 	return fn(aliasContent)
 }
-
-
 
 func LoadKubeAlias() map[string]any {
 

@@ -25,11 +25,10 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/jose78/kubectl-alias/commons"
-	_ "github.com/mattn/go-sqlite3" 
+	_ "github.com/mattn/go-sqlite3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -39,7 +38,7 @@ type SelectResult struct {
 }
 
 // Execute Select winthin the database
-func (conf dbConf)EvaluateSelect(sqlSelect string) SelectResult {
+func (conf dbConf) EvaluateSelect(sqlSelect string) SelectResult {
 
 	rows, errSelect := conf.db.Query(sqlSelect)
 	if errSelect != nil {
@@ -86,14 +85,13 @@ func (conf dbConf) CreateTable(table string) {
 	createTable := fmt.Sprintf(data, table, table)
 	statement, err := conf.db.Prepare(createTable)
 	if err != nil {
-		log.Fatal(err.Error())
+		commons.ErrorDBCreateTable.BuildMsgError(table, err)
 	}
 	statement.Exec()
-	log.Printf("%s table created\n", table)
 }
 
 // Insert list of items of same type in a table
-func (conf dbConf) Insert( k8sValues []unstructured.Unstructured, tbl string) {
+func (conf dbConf) Insert(k8sValues []unstructured.Unstructured, tbl string) {
 
 	for _, value := range k8sValues {
 
@@ -102,15 +100,14 @@ func (conf dbConf) Insert( k8sValues []unstructured.Unstructured, tbl string) {
 		statement, err := conf.db.Prepare(valueStr) // Prepare statement.
 		// This is good to avoid SQL injections
 		if err != nil {
-			log.Fatalln(err.Error())
+			commons.ErrorDBInsertPrepare.BuildMsgError(tbl, err)
 		}
 		_, err = statement.Exec()
 		if err != nil {
-			log.Fatalln(err.Error())
+			commons.ErrorDBRunningInsert.BuildMsgError(tbl, err)
+
 		}
 	}
-	log.Printf("Added into table %s %d elements", tbl, len(k8sValues))
-
 }
 
 // colInfo represents column information, including its name and the table it belongs to.
@@ -119,22 +116,17 @@ type colInfo struct {
 	tableName  string
 }
 
-
-
-
 type dbConf struct {
 	db *sql.DB
 }
-type DbConf interface{
+type DbConf interface {
 	CreateTable(string)
 	Insert([]unstructured.Unstructured, string)
 	EvaluateSelect(string) SelectResult
 	Destroy()
-} 
+}
 
-
-
-func Load() DbConf{
+func Load() DbConf {
 	os.Remove("sqlite-database.db") // I delete the file to avoid duplicated records.
 	// SQLite is a file based database.
 
@@ -143,14 +135,13 @@ func Load() DbConf{
 		commons.ErrorDbNotCreaterd.BuildMsgError(errCReateDbObj).KO()
 	}
 	file.Close()
-	log.Println("sqlite-database.db created")
 
 	sqliteDatabase, errOpeningDB := sql.Open("sqlite3", "./sqlite-database.db") // Open the created SQLite File
-	if errOpeningDB != nil{
+	if errOpeningDB != nil {
 		commons.ErrorDbOpening.BuildMsgError(errOpeningDB).KO()
 	}
 	conf := dbConf{db: sqliteDatabase}
-	return conf 
+	return conf
 }
 
 func (conf dbConf) Destroy() {

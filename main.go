@@ -22,8 +22,6 @@ THE SOFTWARE.
 package main
 
 import (
-	"fmt"
-
 	"github.com/jose78/kubectl-alias/cmd"
 )
 
@@ -31,6 +29,5 @@ import (
 var Version string
 
 func main() {
-	fmt.Println(Version)
 	cmd.Execute(Version)
 }

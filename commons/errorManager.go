@@ -54,6 +54,9 @@ const (
 	ErrorSqlScaningResultSelect
 	ErrorDbNotCreaterd
 	ErrorDbOpening
+	ErrorDBCreateTable
+	ErrorDBInsertPrepare
+	ErrorDBRunningInsert
 )
 
 func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
@@ -99,7 +102,13 @@ func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 	case ErrorDbNotCreaterd:
 		errorSystem = ErrorSystem{18, fmt.Sprintf("creating the DB object: %v", params[0])}
 	case ErrorDbOpening:
-		errorSystem = ErrorSystem{18, fmt.Sprintf("opening the DB object %s: %v", params[0])}
+		errorSystem = ErrorSystem{18, fmt.Sprintf("opening the DB object: %v", params[0])}
+	case ErrorDBCreateTable:
+		errorSystem = ErrorSystem{19, fmt.Sprintf("creatiung the DB %s: %v", params[0],params[1])}
+	case ErrorDBInsertPrepare:
+		errorSystem = ErrorSystem{20, fmt.Sprintf("preparing the insert within the table %s: %v", params[0],params[1])}
+	case ErrorDBRunningInsert:
+		errorSystem = ErrorSystem{20, fmt.Sprintf("executing the insert within the table %s: %v", params[0],params[1])}
 
 	}
 

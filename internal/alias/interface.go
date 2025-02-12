@@ -22,17 +22,12 @@ THE SOFTWARE.
 
 package alias
 
-import "github.com/jose78/kubectl-alias/internal/generic"
-
-
-
-
+import (
+	"github.com/jose78/kubectl-alias/internal/generic"
+	"github.com/spf13/cobra"
+)
 
 // Command pattern to encapsulate an execution
-type Command interface {
-	Execute(generic.CommandContext)
+type Alias  interface {
+	GenerateDoc(generic.CommandContext) []*cobra.Command
 }
-
-
-
-

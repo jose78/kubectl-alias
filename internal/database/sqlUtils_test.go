@@ -28,7 +28,7 @@ import (
 
 func TestWrapColumnsWithHisn(t *testing.T) {
 	simple_select := "SELECT  ns.metadata.perconte.name AS ns_name,  p.metadata.name AS pod_name FROM ns, pod AS p WHERE  ns.metadata.namespace LIKE   'MEGANITO' ||  p.metadata.name;"
-	simple_select_result := "select json_extract(ns , '$.Object.metadata.perconte.name') as ns_name, json_extract(pod , '$.Object.metadata.name') as pod_name from ns, pod as p where json_extract(ns , '$.Object.metadata.namespace') like 'MEGANITO'  ||  json_extract(pod , '$.Object.metadata.name')"
+	simple_select_result := "select json_extract(ns , '$.Object.metadata.perconte.name') as ns_name, json_extract(pod , '$.Object.metadata.name') as pod_name from ns, pod as p where json_extract(ns , '$.Object.metadata.namespace') like 'MEGANITO' || json_extract(pod , '$.Object.metadata.name')"
 	type args struct {
 		query string
 	}
