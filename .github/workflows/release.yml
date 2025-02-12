@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     branches:
-      - main  # Trigger only on changes to the main branch
+      - master  # Trigger only on changes to the main branch
       - feat/actions
 
 jobs:
@@ -43,10 +43,12 @@ jobs:
       - name: Package binaries
         run: make package
 
-      - name: Create new GitHub tag
+      - name: Push tag
         run: |
           git tag v${{ env.VERSION }}
           git push origin v${{ env.VERSION }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
