@@ -74,9 +74,7 @@ func ManipulateAST(query string, aliasToTable map[string]string) string {
 	replacer = strings.NewReplacer("`"+separator, "" , separator+")`", ")"  , "open_______" , "[" , "close_______" , "]", separatorConcat, " || ")
 	                                                                                                                                      
 
-	fmt.Print(modifiedQuery)
 	modifiedQuery = replacer.Replace(modifiedQuery)
-	fmt.Print(modifiedQuery)
 	return modifiedQuery
 }
 
@@ -136,9 +134,7 @@ func FindTablesWithAliases(query string) map[string]string {
 	replacer := strings.NewReplacer(".", separator ,"[", "open_______" ,"]", "close_______" , "||" , separatorConcat)
 
 
-	fmt.Println(query)
 	query = replacer.Replace(query)
-	fmt.Println(query)
 	// Parsear la consulta a un AST
 	stmt, _ := sqlparser.Parse(query)
 	selectStmt, ok := stmt.(*sqlparser.Select)
