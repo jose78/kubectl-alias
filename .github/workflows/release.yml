@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - master  # Trigger only on changes to the main branch
-      - feat/actions
 
 jobs:
   release:
@@ -57,7 +56,10 @@ jobs:
           name: Release v${{ env.VERSION }}
           body: |
             🚀 New release v${{ env.VERSION }}!
-            - Built from `main`
-          files: dist/*.zip
+            - Built from `master`
+          # Allow both zip and tar.gz files in the release
+          files: |
+            dist/*.zip
+            dist/*.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

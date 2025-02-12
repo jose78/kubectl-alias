@@ -40,7 +40,7 @@ aliases:
             * The pod's name
         This information is gathered by joining the pod, service, deployment, node, and ReplicaSet resources. It filters the results to show only pods that are associated with services and deployments based on label matching, and links pods to their respective nodes and ReplicaSets. This query is particularly useful for understanding the relationships between different Kubernetes resources and troubleshooting deployment issues.
       sql: |
-          SELECT  p.metadata.namespace as NAMESPACE , n.metadata.name as NODE_NAME , p.metadata.name POD_NAME, 'PERPEPE   ' ||  s.spec.ports[0].port as SVC
+          SELECT  p.metadata.namespace as NAMESPACE , n.metadata.name as NODE_NAME , p.metadata.name POD_NAME, 'service ' || s.metadata.name || ':'  ||  s.spec.ports[0].port || ' -> ' || s.spec.ports[0].targetPort as SVC
           FROM 
               pod p, svc s, deploy d , node n
           where p.metadata.labels.app = s.spec.selector.app 
