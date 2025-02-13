@@ -46,7 +46,7 @@ aliases:
   PUT_HERE_YOUR_SUBCOMMAND:
     short: Short description of your functionality (mandatory)
     long: Long description of your functionality with examples (mandatory)
-    args: List of strings, with the values to be replaced within the select (optional)
+    args: List of strings, with the name of the param to be replaced within the select (optional)
     sql: Select statement to be executed (mandatory)
 
   PUT_HERE_YOUR_ANOTHER_SUBCOMMAND:
