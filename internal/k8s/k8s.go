@@ -126,7 +126,6 @@ func createConfiguration(pathKubeCondif string) K8sConf {
 	return k8sConf
 }
 
-
 // K8sInfo encapsulates information and configuration needed to interact with a Kubernetes cluster.
 type K8sInfo struct {
 	// PathK8sConfig specifies the path to the Kubernetes configuration file (kubeconfig).
@@ -153,12 +152,12 @@ type K8sInfo struct {
 // Returns:
 //   - map[string]defaultResource: A map where the keys represent resource types (e.g., "pods", "services"),
 //     and the values are `defaultResource` objects that define how to interact with these resource types.
-func GenerateMapObjects(info K8sInfo ) map[string]defaultResource {
+func GenerateMapObjects(info K8sInfo) map[string]defaultResource {
 	ns := info.NamespaceDefault
 	pathK8s := retrieveKubeConf(info.PathK8sConfig)
 	conf := createConfiguration(pathK8s)
 	clientConfig := conf.clientConf
-	
+
 	//Retrieve the list of apiResources
 	apiResourceLists, _ := clientConfig.Discovery().ServerPreferredResources()
 	result := map[string]defaultResource{}
@@ -174,16 +173,16 @@ func GenerateMapObjects(info K8sInfo ) map[string]defaultResource {
 		// Iterar sobre los recursos individuales
 		for _, resource := range apiResourceList.APIResources {
 			defaultNs := ""
-			if resource.Namespaced{
+			if resource.Namespaced {
 				defaultNs = ns
 			}
 			defaultResource := defaultResource{
-					GroupVersionResource: schema.GroupVersionResource{
-						Version:  groupVersion.Version,
-						Group:    groupVersion.Group,
-						Resource: resource.Name,
-					}, NameSpace: defaultNs,
-				}
+				GroupVersionResource: schema.GroupVersionResource{
+					Version:  groupVersion.Version,
+					Group:    groupVersion.Group,
+					Resource: resource.Name,
+				}, NameSpace: defaultNs,
+			}
 			if len(resource.ShortNames) > 0 {
 				// Check if there some aliases, in that case, for each alias it will store a new entry
 				for _, alias := range resource.ShortNames {
@@ -224,11 +223,11 @@ type defaultResource struct {
 // Notes:
 //   - This function uses the information in `config` to determine the correct resource type and
 //     namespace. If the specified resource type is not supported, an error or empty result may be returned.
-func RetrieveK8sObjects(config K8sInfo , k8sObject string) []unstructured.Unstructured {
-	
+func RetrieveK8sObjects(config K8sInfo, k8sObject string) []unstructured.Unstructured {
+
 	pathK8s := retrieveKubeConf(config.PathK8sConfig)
 	conf := createConfiguration(pathK8s)
-	mapK8sObject :=  config.K8sResources
+	mapK8sObject := config.K8sResources
 	result := []unstructured.Unstructured{}
 
 	obj, ok := mapK8sObject[k8sObject]

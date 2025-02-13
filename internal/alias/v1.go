@@ -50,15 +50,14 @@ type AliasDefV1 struct {
 // Implementation of interface Command for version V1 of alias functionality
 func (aliasFiltered AliasV1) execute(ctx generic.CommandContext) {
 
-
 	sql := aliasFiltered.SQL
-	if len(aliasFiltered.Args) >0 {
-		for index := 0; index <  len(aliasFiltered.Args); index ++{
+	if len(aliasFiltered.Args) > 0 {
+		for index := 0; index < len(aliasFiltered.Args); index++ {
 			sql = strings.ReplaceAll(sql, aliasFiltered.Args[index], ctx.Args[index])
 		}
 	}
 
-	aliasToTable := database.FindTablesWithAliases(sql )
+	aliasToTable := database.FindTablesWithAliases(sql)
 	tables := []string{}
 	collections.Map(func(touple collections.Touple) any { return touple.Value }, aliasToTable, &tables)
 
@@ -66,7 +65,7 @@ func (aliasFiltered AliasV1) execute(ctx generic.CommandContext) {
 	mapObjects := k8s.GenerateMapObjects(k8sInfo)
 	k8sInfo.K8sResources = mapObjects
 
-	sqlSelect := database.ManipulateAST(sql , aliasToTable)
+	sqlSelect := database.ManipulateAST(sql, aliasToTable)
 
 	dbObjetc := database.Load()
 	defer dbObjetc.Destroy()

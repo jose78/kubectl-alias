@@ -29,11 +29,11 @@ import "github.com/jose78/kubectl-alias/commons"
 // and any flags set during the command invocation.
 //
 // Fields:
-// - SubCommand: The name of the subcommand executed by the user.
-// - Args: A slice containing the positional arguments passed to the subcommand.
-// - Flags: A map storing flag names as keys and their corresponding values,
-//          representing options or settings provided during execution.
+//   - SubCommand: The name of the subcommand executed by the user.
+//   - Args: A slice containing the positional arguments passed to the subcommand.
+//   - Flags: A map storing flag names as keys and their corresponding values,
+//     representing options or settings provided during execution.
 type CommandContext struct {
-	Args       []string
-	Flags      map[commons.KeyContext]*string
-} 
+	Args  []string
+	Flags map[commons.KeyContext]*string
+}

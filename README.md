@@ -1,4 +1,13 @@
-# kubectl-alias
+
+
+[![kubectl-alias](https://github.com/jose78/kubectl-alias/actions/workflows/release.yml/badge.svg)](https://github.com/jose78/kubectl-alias/actions/workflows/release.yml)
+![GitHub Release](https://img.shields.io/github/v/release/jose78/kubectl-alias)
+[![Go Report Card](https://goreportcard.com/badge/github.com/jose78/kubectl-alias)](https://goreportcard.com/report/github.com/jose78/kubectl-alias)
+
+
+# kubectl-alias <img align="right" width="80" height="100" src="resources/kubectl-alias-logo.png" alt="Kubectl-alias">
+
+
 
 ## Description
 
@@ -6,10 +15,10 @@ kubectl-alias is a kubectl plugin that allows customizing command output using S
 
 ## Installation
 
-There a lot of ways to install the SW:
+There are several ways to install the software:
 
-* Download directly from the Relerase
-To install kubectl-alias, simply download it and add it to your $PATH. Ensure the binary has execution permissions:
+* **Download directly from the Release:**
+  To install kubectl-alias, simply download it and add it to your `$PATH`. Ensure the binary has execution permissions:
 
 ```shell
 chmod +x kubectl-alias
@@ -18,6 +27,8 @@ mv kubectl-alias /usr/local/bin/
 
 * Clone the repo and build your own executable:
 ```shell 
+git clone https://github.com/jose78/kubectl-alias.git
+cd kubectl-alias
 go mod tidy
 go build -o kubectl-alias
 mv kubectl-alias /usr/local/bin/
@@ -25,21 +36,23 @@ mv kubectl-alias /usr/local/bin/
 
 ## Configuration
 
+Configuration
 The plugin requires the KUBEALIAS environment variable to point to a configuration file with the following YAML structure:
 
 ```yaml
 ---
-version: v1 $ The current versión of the api.
+version: v1 # The current version of the API.
 aliases:
   PUT_HERE_YOUR_SUBCOMMAND:
-    short: Display the description of each pod and linked service.
-    long: This query retrieves all information from the event table, providing a comprehensive view of system events. It can be used to monitor and troubleshoot the cluster by showing detailed information about pod and service-related events.
-    sql: Select to be executed
+    short: Short description of your functionality (mandatory)
+    long: Long description of your functionality with examples (mandatory)
+    args: List of strings, with the values to be replaced within the select (optional)
+    sql: Select statement to be executed (mandatory)
 
   PUT_HERE_YOUR_ANOTHER_SUBCOMMAND:
-    short: Display the description of each pod and linked service.
-    long: This query retrieves all information from the event table, providing a comprehensive view of system events. It can be used to monitor and troubleshoot the cluster by showing detailed information about pod and service-related events.
-    sql: Select to be executed
+    short: Short description of your functionality (mandatory)
+    long: Long description of your functionality with examples (mandatory)
+    sql: Select statement to be executed (mandatory)
     
 ```
 
@@ -62,7 +75,7 @@ kubectl alias PUT_HERE_YOUR_SUBCOMMANDS
 
 ## Example
 
-In my case I have now only one alias called simple_pod.
+In my case, I have now only one alias called simple_pod.
 
 ```yaml
 ---
@@ -86,28 +99,27 @@ aliases:
           and d.metadata.labels.app = s.spec.selector.app  
           and  p.metadata.name like '%POD_NAME%'
 ```
+Please note that within the example, we have only one argument and it is referenced inside the select statement.
 
-Executing the next command: 
+Executing the next command:
 ```yaml
 kubectl alias simple_pod test
 ```
-I have the next result
+
+I get the following result:
 
 ![alt text](resources/screenshot.png "Execution of alias simple_pod")
 
 
 ## Road Map
-
-  * Add another outputs formats (json, yaml, csv) or custom using a go template. 
-  * Add Openshift functionality.
-  * Allow to use more formats to configure the KUBEALIAS like TOML, json, etc.
-  * Enamble to use functions of go Tamplate.
-  * Manager to add online subCommans.
+  * Add other output formats (json, yaml, csv) or custom using a Go template.
+  * Add OpenShift functionality.
+  * Allow using more formats to configure the KUBEALIAS like TOML, json, etc.
+  * Enable using functions of Go Template.
+  * Manager to add online subcommands.
 
 ## Contributing
-
 Contributions are welcome. To report issues or suggest improvements, open an issue in the project repository.
 
 ## License
-
 This project is licensed under the MIT License. See the LICENSE file for more details.
