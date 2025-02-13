@@ -1,5 +1,5 @@
 /*
-Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com) 
+Copyright © 2025 Jose Clavero Anderica (jose.clavero.anderica@gmail.com)
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -24,14 +24,13 @@ package commons
 
 type KeyContext int
 
-
-const  (
-	ENV_VAR_KUBEALIAS_NAME = "KUBEALIAS"
-	ENV_VAR_KUBECONFIG = "KUBECONFIG"
-	CTX_KEY_ALIAS_NAME KeyContext = iota
-	CTX_KEY_ALIAS_ARGS  
-	CTE_KUBECONFIG      
-	CTE_NS              
-	CTE_TABLE           
+const (
+	ENV_VAR_KUBEALIAS_NAME            = "KUBEALIAS"
+	ENV_VAR_KUBECONFIG                = "KUBECONFIG"
+	CTX_KEY_ALIAS_NAME     KeyContext = iota
+	CTX_KEY_ALIAS_ARGS
+	CTE_KUBECONFIG
+	CTE_NS
+	CTE_TABLE
 	CTE_MAP_K8S_OBJECT
 )

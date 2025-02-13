@@ -64,11 +64,11 @@ func Execute(version string) {
 		},
 	})
 
-	flags := map[commons.KeyContext]*string{commons.CTE_KUBECONFIG: kubeconfig , commons.CTE_NS: namespace}
-	ctx:= generic.CommandContext{Flags:  flags}
+	flags := map[commons.KeyContext]*string{commons.CTE_KUBECONFIG: kubeconfig, commons.CTE_NS: namespace}
+	ctx := generic.CommandContext{Flags: flags}
 	contentKubeAlias := alias.LoadKubeAlias()
-	lstCobraCmd :=  alias.FactoryAlias(contentKubeAlias).GenerateDoc(ctx)
-	for _ , item := range lstCobraCmd{
+	lstCobraCmd := alias.FactoryAlias(contentKubeAlias).GenerateDoc(ctx)
+	for _, item := range lstCobraCmd {
 		rootCmd.AddCommand(item)
 	}
 

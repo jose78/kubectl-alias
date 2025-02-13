@@ -104,11 +104,11 @@ func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 	case ErrorDbOpening:
 		errorSystem = ErrorSystem{18, fmt.Sprintf("opening the DB object: %v", params[0])}
 	case ErrorDBCreateTable:
-		errorSystem = ErrorSystem{19, fmt.Sprintf("creatiung the DB %s: %v", params[0],params[1])}
+		errorSystem = ErrorSystem{19, fmt.Sprintf("creatiung the DB %s: %v", params[0], params[1])}
 	case ErrorDBInsertPrepare:
-		errorSystem = ErrorSystem{20, fmt.Sprintf("preparing the insert within the table %s: %v", params[0],params[1])}
+		errorSystem = ErrorSystem{20, fmt.Sprintf("preparing the insert within the table %s: %v", params[0], params[1])}
 	case ErrorDBRunningInsert:
-		errorSystem = ErrorSystem{20, fmt.Sprintf("executing the insert within the table %s: %v", params[0],params[1])}
+		errorSystem = ErrorSystem{20, fmt.Sprintf("executing the insert within the table %s: %v", params[0], params[1])}
 
 	}
 

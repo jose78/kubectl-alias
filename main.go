@@ -25,7 +25,6 @@ import (
 	"github.com/jose78/kubectl-alias/cmd"
 )
 
-
 var Version string
 
 func main() {

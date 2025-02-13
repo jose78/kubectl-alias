@@ -28,6 +28,6 @@ import (
 )
 
 // Command pattern to encapsulate an execution
-type Alias  interface {
+type Alias interface {
 	GenerateDoc(generic.CommandContext) []*cobra.Command
 }

@@ -82,9 +82,9 @@ func Test_regenerateColInfo(t *testing.T) {
 		args args
 		want colInfo
 	}{
-		{"add prefix from name table" , args{colSplited: []string{ "events" , "regarding", "kind" },aliasToTable:  map[string]string{"events": "events", "p": "pods"}}, colInfo{columnName: "$.Object.regarding.kind", tableName: "events"} },
-		{"add prefix without alias" , args{colSplited: []string{ "regarding", "kind" },aliasToTable:  map[string]string{"e": "events"}}, colInfo{columnName: "$.Object.regarding.kind", tableName: "events"} },
-		{"add prefix from alias" , args{colSplited: []string{ "e" , "regarding", "kind" },aliasToTable:  map[string]string{"e": "events"}}, colInfo{columnName: "$.Object.regarding.kind", tableName: "events"} },
+		{"add prefix from name table", args{colSplited: []string{"events", "regarding", "kind"}, aliasToTable: map[string]string{"events": "events", "p": "pods"}}, colInfo{columnName: "$.Object.regarding.kind", tableName: "events"}},
+		{"add prefix without alias", args{colSplited: []string{"regarding", "kind"}, aliasToTable: map[string]string{"e": "events"}}, colInfo{columnName: "$.Object.regarding.kind", tableName: "events"}},
+		{"add prefix from alias", args{colSplited: []string{"e", "regarding", "kind"}, aliasToTable: map[string]string{"e": "events"}}, colInfo{columnName: "$.Object.regarding.kind", tableName: "events"}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
