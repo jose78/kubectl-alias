@@ -26,6 +26,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
+	"path/filepath"
 
 	"github.com/jose78/kubectl-alias/commons"
 	_ "github.com/mattn/go-sqlite3"
@@ -126,17 +128,25 @@ type DbConf interface {
 	Destroy()
 }
 
+func getDbFaile() string {
+	kubeAliasPaths := os.Getenv(commons.ENV_VAR_KUBEALIAS_NAME)
+	path := path.Dir(kubeAliasPaths)
+	path = filepath.Join(path, "sqlite-database.db") 
+	return path
+}
+
 func Load() DbConf {
-	os.Remove("sqlite-database.db") // I delete the file to avoid duplicated records.
+	path := getDbFaile()
+	os.Remove( path) // I delete the file to avoid duplicated records.
 	// SQLite is a file based database.
 
-	file, errCReateDbObj := os.Create("sqlite-database.db") // Create SQLite file
+	file, errCReateDbObj := os.Create(path) // Create SQLite file
 	if errCReateDbObj != nil {
 		commons.ErrorDbNotCreaterd.BuildMsgError(errCReateDbObj).KO()
 	}
 	file.Close()
 
-	sqliteDatabase, errOpeningDB := sql.Open("sqlite3", "./sqlite-database.db") // Open the created SQLite File
+	sqliteDatabase, errOpeningDB := sql.Open("sqlite3", path) // Open the created SQLite File
 	if errOpeningDB != nil {
 		commons.ErrorDbOpening.BuildMsgError(errOpeningDB).KO()
 	}
@@ -146,5 +156,5 @@ func Load() DbConf {
 
 func (conf dbConf) Destroy() {
 	conf.db.Close()
-	os.Remove("./sqlite-database.db")
+	os.Remove(getDbFaile())
 }
