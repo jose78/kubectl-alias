@@ -28,6 +28,7 @@ import (
 	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/kubectl-alias/internal/alias"
 	"github.com/jose78/kubectl-alias/internal/generic"
+	"github.com/jose78/kubectl-alias/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -64,7 +65,9 @@ func Execute(version string) {
 		},
 	})
 
-	flags := map[commons.KeyContext]*string{commons.CTE_KUBECONFIG: kubeconfig, commons.CTE_NS: namespace}
+
+
+	flags := map[commons.KeyContext]any{commons.CTE_KUBECONFIG: kubeconfig, commons.CTE_NS: namespace}
 	ctx := generic.CommandContext{Flags: flags}
 	contentKubeAlias := alias.LoadKubeAlias()
 	lstCobraCmd := alias.FactoryAlias(contentKubeAlias).GenerateDoc(ctx)
@@ -81,7 +84,9 @@ func Execute(version string) {
 var kubeconfig *string
 var namespace *string
 
+
 func init() {
 	kubeconfig = rootCmd.PersistentFlags().StringP("kubeconfig", "k", "", "Specifies the path to the Kubernetes configuration file (default is $HOME/.kube/config).")
 	namespace = rootCmd.PersistentFlags().StringP("namespace", "n", "", "Specifies the default Kubernetes namespace to use.")
+	rootCmd.PersistentFlags().BoolVarP(&utils.Verbose, "verbose", "v", false, "Enable verbose output for debugging and detailed logs (default is false).")
 }

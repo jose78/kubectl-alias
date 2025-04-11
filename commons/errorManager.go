@@ -25,6 +25,8 @@ package commons
 import (
 	"fmt"
 	"os"
+
+	"github.com/jose78/kubectl-alias/internal/utils"
 )
 
 type errorManager int
@@ -117,6 +119,6 @@ func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 }
 
 func (err ErrorSystem) KO() {
-	fmt.Print(err.errorMsg)
+	utils.Logger(utils.ERROR, err.errorMsg)
 	os.Exit(err.errorCode)
 }

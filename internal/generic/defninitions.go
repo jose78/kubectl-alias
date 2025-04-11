@@ -35,5 +35,5 @@ import "github.com/jose78/kubectl-alias/commons"
 //     representing options or settings provided during execution.
 type CommandContext struct {
 	Args  []string
-	Flags map[commons.KeyContext]*string
+	Flags map[commons.KeyContext]any
 }

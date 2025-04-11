@@ -32,6 +32,7 @@ import (
 	"github.com/jose78/kubectl-alias/internal/generic"
 	"github.com/jose78/kubectl-alias/internal/k8s"
 	"github.com/jose78/kubectl-alias/internal/output"
+	"github.com/jose78/kubectl-alias/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -49,7 +50,7 @@ type AliasDefV1 struct {
 
 // Implementation of interface Command for version V1 of alias functionality
 func (aliasFiltered AliasV1) execute(ctx generic.CommandContext) {
-
+	utils.Logger(utils.INFO, "Start v1")
 	sql := aliasFiltered.SQL
 	if len(aliasFiltered.Args) > 0 {
 		for index := 0; index < len(aliasFiltered.Args); index++ {
@@ -60,8 +61,9 @@ func (aliasFiltered AliasV1) execute(ctx generic.CommandContext) {
 	aliasToTable := database.FindTablesWithAliases(sql)
 	tables := []string{}
 	collections.Map(func(touple collections.Touple) any { return touple.Value }, aliasToTable, &tables)
-
-	k8sInfo := k8s.K8sInfo{PathK8sConfig: *ctx.Flags[commons.CTE_KUBECONFIG], NamespaceDefault: *ctx.Flags[commons.CTE_NS]}
+	pathK8sConfig := ctx.Flags[commons.CTE_KUBECONFIG].(*string)
+	namespaceDefault := ctx.Flags[commons.CTE_NS].(*string)
+	k8sInfo := k8s.K8sInfo{PathK8sConfig: *pathK8sConfig, NamespaceDefault: *namespaceDefault}
 	mapObjects := k8s.GenerateMapObjects(k8sInfo)
 	k8sInfo.K8sResources = mapObjects
 
@@ -76,6 +78,7 @@ func (aliasFiltered AliasV1) execute(ctx generic.CommandContext) {
 	}
 	rows := dbObjetc.EvaluateSelect(sqlSelect)
 	output.PrintStdout(rows)
+	utils.Logger(utils.INFO, "End v1")
 }
 
 func (alias AliasDefV1) GenerateDoc(ctx generic.CommandContext) []*cobra.Command {
