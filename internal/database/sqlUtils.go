@@ -134,9 +134,9 @@ func FindTablesWithAliases(query string) map[string]string {
 
 	replacer := strings.NewReplacer(".", separator, "[", "open_______", "]", "close_______", "||", separatorConcat)
 
-	query = replacer.Replace(query)
+	newQuery := replacer.Replace(query)
 	// Parsear la consulta a un AST
-	stmt, _ := sqlparser.Parse(query)
+	stmt, _ := sqlparser.Parse(newQuery)
 	selectStmt, ok := stmt.(*sqlparser.Select)
 	if !ok {
 		commons.ErrorSqlNotASelect.BuildMsgError(query).KO()

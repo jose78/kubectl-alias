@@ -67,7 +67,7 @@ func LoadKubeAlias() map[string]any {
 	var result map[string]any
 	errParsingKubeAliasContent := yaml.Unmarshal(aliasByteConent, &result)
 	if errParsingKubeAliasContent != nil {
-		commons.ErrorKubeAliasParseFile.BuildMsgError(kubepath, errParsingKubeAliasContent)
+		commons.ErrorKubeAliasParseFile.BuildMsgError(kubepath, errParsingKubeAliasContent).KO()
 	}
 	return result
 }

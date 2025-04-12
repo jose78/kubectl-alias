@@ -24,6 +24,7 @@ package database
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -88,7 +89,7 @@ func (conf dbConf) CreateTable(table string) {
 	createTable := fmt.Sprintf(data, table, table)
 	statement, err := conf.db.Prepare(createTable)
 	if err != nil {
-		commons.ErrorDBCreateTable.BuildMsgError(table, err)
+		commons.ErrorDBCreateTable.BuildMsgError(table, err).KO()
 	}
 	statement.Exec()
 }
@@ -107,12 +108,11 @@ func (conf dbConf) Insert(k8sValues []unstructured.Unstructured, table string) {
 		statement, err := conf.db.Prepare(valueStr) // Prepare statement.
 		// This is good to avoid SQL injections
 		if err != nil {
-			commons.ErrorDBInsertPrepare.BuildMsgError(table, err)
+			commons.ErrorDBInsertPrepare.BuildMsgError(table, err).KO()
 		}
 		_, err = statement.Exec()
 		if err != nil {
-			commons.ErrorDBRunningInsert.BuildMsgError(table, err)
-
+			commons.ErrorDBRunningInsert.BuildMsgError(table, err).KO()
 		}
 	}
 }
@@ -140,6 +140,18 @@ func getDbFaile() string {
 	return path
 }
 
+
+func checkDbFile(path string) {
+	if _ , err := os.Stat(path); err == nil  {
+		utils.Logger(utils.WARN, fmt.Sprintf("the db file not exist %s: %v" ,  path, err))
+	} else if  errors.Is(err, os.ErrNotExist) {
+			// path/to/whatever does *not* exist
+		utils.Logger(utils.WARN, fmt.Sprintf("the db file not exist %s: %v" ,  path, err))
+	} else {
+		utils.Logger(utils.WARN, fmt.Sprintf("generic error checking the file %s: %v" ,  path, err))
+	}
+}
+
 func Load() DbConf {
 	utils.Logger(utils.INFO, "Load db")
 	path := getDbFaile()
@@ -149,6 +161,8 @@ func Load() DbConf {
 		commons.ErrorDbNotCreaterd.BuildMsgError(errCReateDbObj).KO()
 	}
 	file.Close()
+
+	checkDbFile(path)
 
 	sqliteDatabase, errOpeningDB := sql.Open("sqlite3", path) // Open the created SQLite File
 	if errOpeningDB != nil {
