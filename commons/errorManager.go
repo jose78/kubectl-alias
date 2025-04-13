@@ -25,6 +25,8 @@ package commons
 import (
 	"fmt"
 	"os"
+
+	"github.com/jose78/kubectl-alias/internal/utils"
 )
 
 type errorManager int
@@ -41,6 +43,7 @@ const (
 	ErrorK8sRestResource
 	ErrorK8sRestResourceWithoutNS
 	ErrorK8sClientConfig
+	ErrorK8sNotContext
 	ErrorK8sKubeconfgNotAccesible
 	ErrorJsonMarshallResourceList
 	ErrorKubeAliasPathNotDefined
@@ -57,6 +60,12 @@ const (
 	ErrorDBCreateTable
 	ErrorDBInsertPrepare
 	ErrorDBRunningInsert
+	ErrorK8sClusterNotFoundInKubeconfig
+	ErrorK8sAuthInfoNotFoundInKubeconfig
+	ErrorK8sLoadingKubeconfig
+	ErrorGeneric
+	ErrorK8sConfIsNotProperlyInitialized
+	FailedToConnectToKubernetesAPIServer
 )
 
 func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
@@ -108,8 +117,22 @@ func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 	case ErrorDBInsertPrepare:
 		errorSystem = ErrorSystem{20, fmt.Sprintf("preparing the insert within the table %s: %v", params[0], params[1])}
 	case ErrorDBRunningInsert:
-		errorSystem = ErrorSystem{20, fmt.Sprintf("executing the insert within the table %s: %v", params[0], params[1])}
-
+		errorSystem = ErrorSystem{21, fmt.Sprintf("executing the insert within the table %s: %v", params[0], params[1])}
+	case ErrorK8sNotContext:
+		errorSystem = ErrorSystem{22, "current Context: Not explicitly set in kubeconfig."}
+	case ErrorK8sAuthInfoNotFoundInKubeconfig:
+		errorSystem = ErrorSystem{21, fmt.Sprintf("executing the insert within the table %s: %v", params[0], params[1])}
+	case ErrorK8sClusterNotFoundInKubeconfig:
+		errorSystem = ErrorSystem{22, fmt.Sprintf("Cluster '%s' not found in kubeconfig", params[0] ) }
+	case ErrorK8sLoadingKubeconfig:
+		errorSystem = ErrorSystem{22, fmt.Sprintf("error loading kubeconfig from %s: %v", params[0], params[1] ) }
+	case ErrorGeneric:
+		errorSystem = ErrorSystem{22, fmt.Sprintf("generic error: %v", params[0] ) }
+	case ErrorK8sConfIsNotProperlyInitialized:
+		errorSystem = ErrorSystem{22, "K8sConf is not properly initialized: restConf or clientConf is nil" }
+	
+	case FailedToConnectToKubernetesAPIServer:
+		errorSystem = ErrorSystem{22, fmt.Sprintf("failed to connect to Kubernetes API server: %v", params[0] ) }
 	}
 
 	errorSystem.errorMsg = fmt.Sprintf("error msg: %s\nerror code: %d", errorSystem.errorMsg, errorSystem.errorCode)
@@ -117,6 +140,7 @@ func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 }
 
 func (err ErrorSystem) KO() {
-	fmt.Print(err.errorMsg)
+	utils.Logger(utils.ERROR, err.errorMsg)
+	fmt.Println("PEPEPEP")
 	os.Exit(err.errorCode)
 }

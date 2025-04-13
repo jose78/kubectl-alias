@@ -26,8 +26,10 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/jose78/kubectl-alias/commons"
+	"github.com/jose78/kubectl-alias/internal/utils"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -36,6 +38,9 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
+
+var NamespaceDefault string
+var KubePath string
 
 // retrieveContent retrieves the list of Kubernetes resources of the specified type,
 // using the provided REST configuration to communicate with the Kubernetes API server.
@@ -84,15 +89,100 @@ type K8sConf struct {
 }
 
 // retrieveKubeConf discover which is the path of kubeconfig
-func retrieveKubeConf(path string) string {
-	if path != "" {
-		os.Setenv(commons.ENV_VAR_KUBECONFIG, path)
+func retrieveKubeConf() string {
+
+	var kubeconfigPath string
+	if KubePath != "" {
+		// Expand the tilde (~) to the user's home directory if present
+		if KubePath[0] == '~' {
+			homeDir, err := os.UserHomeDir()
+			if err == nil {
+				kubeconfigPath = filepath.Join(homeDir, KubePath[1:])
+			}
+		}else{
+			kubeconfigPath = KubePath
+		}
+	} else {
+		kubeconfigPath = os.Getenv(commons.ENV_VAR_KUBECONFIG)
+		if kubeconfigPath == "" {
+			kubeconfigPath = clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
+		}
 	}
-	kubeconfigPath := os.Getenv(commons.ENV_VAR_KUBECONFIG)
-	if kubeconfigPath == "" {
-		kubeconfigPath = clientcmd.NewDefaultClientConfigLoadingRules().GetDefaultFilename()
-	}
+	utils.Logger(utils.INFO, fmt.Sprintf("Kubeconf: %s", kubeconfigPath))
 	return kubeconfigPath
+}
+
+// printExecutionContextFromKubeconfig takes the path to a kubeconfig file
+// and prints relevant information about the Kubernetes execution context
+// (excluding sensitive credential information) if the file can be loaded.
+func printExecutionContextFromKubeconfig(kubeconfigPath string) {
+
+	config, err := clientcmd.LoadFromFile(kubeconfigPath)
+	if err != nil {
+		commons.ErrorK8sLoadingKubeconfig.BuildMsgError(kubeconfigPath, err).KO()
+	}
+
+	if config.CurrentContext != "" {
+		utils.Logger(utils.INFO, fmt.Sprintf("Current Context: %s", config.CurrentContext))
+	} else {
+		commons.ErrorK8sNotContext.BuildMsgError().KO()
+
+	}
+
+	if context, ok := config.Contexts[config.CurrentContext]; ok {
+		if context.Cluster != "" {
+			if cluster, ok := config.Clusters[context.Cluster]; ok {
+				utils.Logger(utils.INFO, fmt.Sprintf("API Server URL: %s", cluster.Server))
+				if cluster.CertificateAuthority != "" {
+					utils.Logger(utils.INFO, fmt.Sprintf("TLS CA File: %s", cluster.CertificateAuthority))
+				} else if cluster.CertificateAuthorityData != nil {
+					utils.Logger(utils.INFO, "TLS CA Data: Provided (not printing raw data)")
+				} else {
+					utils.Logger(utils.INFO, "TLS Configuration: Using system default.")
+				}
+			} else {
+				commons.ErrorK8sClusterNotFoundInKubeconfig.BuildMsgError(context.Cluster).KO()
+			}
+		}
+		if context.AuthInfo != "" {
+			if authInfo, ok := config.AuthInfos[context.AuthInfo]; ok {
+				if authInfo.Username != "" {
+					utils.Logger(utils.INFO, fmt.Sprintf("Username: %s", authInfo.Username))
+				} else if authInfo.Token != "" {
+					utils.Logger(utils.INFO, "Authentication: Using a token (not printing raw token).")
+				} else if authInfo.AuthProvider != nil && authInfo.AuthProvider.Name != "" {
+					utils.Logger(utils.INFO, fmt.Sprintf("Authentication Provider: %s", authInfo.AuthProvider.Name))
+				} else if authInfo.ClientCertificate != "" {
+					utils.Logger(utils.INFO, fmt.Sprintf("Client Certificate File: %s", authInfo.ClientCertificate))
+				} else if authInfo.ClientKey != "" {
+					utils.Logger(utils.INFO, fmt.Sprintf("Client Key File: %s", authInfo.ClientKey))
+				} else {
+					utils.Logger(utils.INFO, "Authentication: Using other method.")
+				}
+			} else {
+				commons.ErrorK8sAuthInfoNotFoundInKubeconfig.BuildMsgError(context.AuthInfo).KO()
+			}
+		}
+	} else {
+		utils.Logger(utils.INFO, "Current context not found in kubeconfig.")
+	}
+
+}
+
+// checkConnectivity attempts to verify the connectivity to the Kubernetes API server
+// using the provided K8sConf. It tries to make a simple API call and returns an error
+// if the connection cannot be established or if there's an issue communicating
+// with the server.
+func checkConnectivity(conf K8sConf)  {
+	if conf.clientConf == nil || conf.restConf == nil {
+		commons.ErrorK8sConfIsNotProperlyInitialized.BuildMsgError().KO()
+	}
+	// Attempt to list the API versions as a simple connectivity check.
+	_, err := conf.clientConf.Discovery().ServerVersion()
+	if err != nil {
+		commons.FailedToConnectToKubernetesAPIServer.BuildMsgError().KO()
+	}
+	utils.Logger(utils.INFO, "Successfully connected to the Kubernetes API server.")
 }
 
 // createConfiguration creates a Kubernetes configuration and clientset based on the provided kubeconfig file path.
@@ -128,14 +218,6 @@ func createConfiguration(pathKubeCondif string) K8sConf {
 
 // K8sInfo encapsulates information and configuration needed to interact with a Kubernetes cluster.
 type K8sInfo struct {
-	// PathK8sConfig specifies the path to the Kubernetes configuration file (kubeconfig).
-	// This file is typically used to authenticate and connect to the Kubernetes API server.
-	PathK8sConfig string
-
-	// NamespaceDefault defines the default Kubernetes namespace to use when none is explicitly provided.
-	// This ensures operations are scoped to the correct namespace by default.
-	NamespaceDefault string
-
 	// K8sResources is a map where the keys represent resource types (e.g., "pods", "services"),
 	// and the values are defaultResource objects that define how to interact with these resources.
 	// This map allows dynamic handling of Kubernetes resources based on their type.
@@ -152,10 +234,12 @@ type K8sInfo struct {
 // Returns:
 //   - map[string]defaultResource: A map where the keys represent resource types (e.g., "pods", "services"),
 //     and the values are `defaultResource` objects that define how to interact with these resource types.
-func GenerateMapObjects(info K8sInfo) map[string]defaultResource {
-	ns := info.NamespaceDefault
-	pathK8s := retrieveKubeConf(info.PathK8sConfig)
+func GenerateMapObjects() map[string]defaultResource {
+	pathK8s := retrieveKubeConf()
+
+	printExecutionContextFromKubeconfig(pathK8s)
 	conf := createConfiguration(pathK8s)
+	checkConnectivity(conf)
 	clientConfig := conf.clientConf
 
 	//Retrieve the list of apiResources
@@ -166,7 +250,7 @@ func GenerateMapObjects(info K8sInfo) map[string]defaultResource {
 	for _, apiResourceList := range apiResourceLists {
 		groupVersion, err := schema.ParseGroupVersion(apiResourceList.GroupVersion)
 		if err != nil {
-			fmt.Printf("Error parsing GroupVersion: %v", err)
+			utils.Logger(utils.INFO, fmt.Sprintf("Error parsing GroupVersion: %v", err))
 			continue
 		}
 
@@ -174,7 +258,7 @@ func GenerateMapObjects(info K8sInfo) map[string]defaultResource {
 		for _, resource := range apiResourceList.APIResources {
 			defaultNs := ""
 			if resource.Namespaced {
-				defaultNs = ns
+				defaultNs = NamespaceDefault
 			}
 			defaultResource := defaultResource{
 				GroupVersionResource: schema.GroupVersionResource{
@@ -193,6 +277,7 @@ func GenerateMapObjects(info K8sInfo) map[string]defaultResource {
 			result[resource.Name] = defaultResource
 		}
 	}
+	utils.Logger(utils.INFO, "generated map object from k8s cluster")
 	return result
 }
 
@@ -225,7 +310,7 @@ type defaultResource struct {
 //     namespace. If the specified resource type is not supported, an error or empty result may be returned.
 func RetrieveK8sObjects(config K8sInfo, k8sObject string) []unstructured.Unstructured {
 
-	pathK8s := retrieveKubeConf(config.PathK8sConfig)
+	pathK8s := retrieveKubeConf()
 	conf := createConfiguration(pathK8s)
 	mapK8sObject := config.K8sResources
 	result := []unstructured.Unstructured{}
@@ -238,6 +323,8 @@ func RetrieveK8sObjects(config K8sInfo, k8sObject string) []unstructured.Unstruc
 		k8sObjs := obj.retrieveContent(conf.restConf)
 		result = k8sObjs
 	}(conf)
+
+	utils.Logger(utils.INFO, fmt.Sprintf("retrieved %d of k8s elements", len(result)))
 
 	return result
 }

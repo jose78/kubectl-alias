@@ -22,12 +22,10 @@ THE SOFTWARE.
 package cmd
 
 import (
-	"fmt"
-	"os"
-
 	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/kubectl-alias/internal/alias"
-	"github.com/jose78/kubectl-alias/internal/generic"
+	"github.com/jose78/kubectl-alias/internal/k8s"
+	"github.com/jose78/kubectl-alias/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -54,34 +52,26 @@ you can tailor the CLI to suit your specific Kubernetes query needs.`,
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute(version string) {
-
 	// Add the version command
 	rootCmd.AddCommand(&cobra.Command{
 		Use:   "version",
 		Short: "Prints the application version",
 		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Println("Kubectl-alias version:", version)
 		},
 	})
-
-	flags := map[commons.KeyContext]*string{commons.CTE_KUBECONFIG: kubeconfig, commons.CTE_NS: namespace}
-	ctx := generic.CommandContext{Flags: flags}
 	contentKubeAlias := alias.LoadKubeAlias()
-	lstCobraCmd := alias.FactoryAlias(contentKubeAlias).GenerateDoc(ctx)
+	lstCobraCmd := alias.FactoryAlias(contentKubeAlias).GenerateDoc()
 	for _, item := range lstCobraCmd {
 		rootCmd.AddCommand(item)
 	}
-
 	err := rootCmd.Execute()
 	if err != nil {
-		os.Exit(1)
+		commons.ErrorGeneric.BuildMsgError(err).KO()
 	}
 }
 
-var kubeconfig *string
-var namespace *string
-
 func init() {
-	kubeconfig = rootCmd.PersistentFlags().StringP("kubeconfig", "k", "", "Specifies the path to the Kubernetes configuration file (default is $HOME/.kube/config).")
-	namespace = rootCmd.PersistentFlags().StringP("namespace", "n", "", "Specifies the default Kubernetes namespace to use.")
+	rootCmd.PersistentFlags().StringVarP(&k8s.KubePath, "kubeconfig", "k", "", "Specifies the path to the Kubernetes configuration file (default is $HOME/.kube/config).")
+	rootCmd.PersistentFlags().StringVarP(&k8s.NamespaceDefault, "namespace", "n", "", "Specifies the default Kubernetes namespace to use.")
+	rootCmd.PersistentFlags().BoolVarP(&utils.Verbose, "verbose", "v", false, "Enable verbose output for debugging and detailed logs (default is false).")
 }

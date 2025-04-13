@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/jose78/kubectl-alias/commons"
-	"github.com/jose78/sqlparser"
 	"math/rand"
 	"time"
+
+	"github.com/jose78/kubectl-alias/commons"
+	"github.com/jose78/kubectl-alias/internal/utils"
+	"github.com/jose78/sqlparser"
 )
 
 const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
@@ -44,6 +46,7 @@ func generateSeparator() string {
 // Returns:
 //   - A modified SQL query string with column references wrapped in `json_extract`.
 func ManipulateAST(query string, aliasToTable map[string]string) string {
+	utils.Logger(utils.INFO, "cooking the select")
 	separator := generateSeparator()
 	separatorConcat := fmt.Sprintf(" + '__________%s__________' + ", generateSeparator())
 	replacer := strings.NewReplacer(".", separator, "[", "open_______", "]", "close_______", "||", separatorConcat)
@@ -131,9 +134,9 @@ func FindTablesWithAliases(query string) map[string]string {
 
 	replacer := strings.NewReplacer(".", separator, "[", "open_______", "]", "close_______", "||", separatorConcat)
 
-	query = replacer.Replace(query)
+	newQuery := replacer.Replace(query)
 	// Parsear la consulta a un AST
-	stmt, _ := sqlparser.Parse(query)
+	stmt, _ := sqlparser.Parse(newQuery)
 	selectStmt, ok := stmt.(*sqlparser.Select)
 	if !ok {
 		commons.ErrorSqlNotASelect.BuildMsgError(query).KO()

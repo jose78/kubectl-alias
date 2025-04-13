@@ -22,6 +22,7 @@ THE SOFTWARE.
 package alias
 
 import (
+	"fmt"
 	"os"
 	"strings"
 
@@ -53,12 +54,13 @@ func FactoryAlias(aliasContent map[string]any) Alias {
 }
 
 func LoadKubeAlias() map[string]any {
+	
 
 	kubepath := os.Getenv(commons.ENV_VAR_KUBEALIAS_NAME)
 	if kubepath == "" {
 		commons.ErrorKubeAliasPathNotDefined.BuildMsgError().KO()
 	}
-
+	fmt.Println("LoadKubeAlias 1")
 	aliasByteConent, errReadingKubeAliasContent := os.ReadFile(kubepath)
 	if errReadingKubeAliasContent != nil {
 		commons.ErrorKubeAliasReadingFile.BuildMsgError(kubepath, errReadingKubeAliasContent).KO()
@@ -67,7 +69,8 @@ func LoadKubeAlias() map[string]any {
 	var result map[string]any
 	errParsingKubeAliasContent := yaml.Unmarshal(aliasByteConent, &result)
 	if errParsingKubeAliasContent != nil {
-		commons.ErrorKubeAliasParseFile.BuildMsgError(kubepath, errParsingKubeAliasContent)
+		commons.ErrorKubeAliasParseFile.BuildMsgError(kubepath, errParsingKubeAliasContent).KO()
 	}
+	fmt.Println("LoadKubeAlias 2")
 	return result
 }

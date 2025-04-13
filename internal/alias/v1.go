@@ -29,9 +29,9 @@ import (
 	"github.com/jose78/go-collections"
 	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/kubectl-alias/internal/database"
-	"github.com/jose78/kubectl-alias/internal/generic"
 	"github.com/jose78/kubectl-alias/internal/k8s"
 	"github.com/jose78/kubectl-alias/internal/output"
+	"github.com/jose78/kubectl-alias/internal/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -48,21 +48,20 @@ type AliasDefV1 struct {
 }
 
 // Implementation of interface Command for version V1 of alias functionality
-func (aliasFiltered AliasV1) execute(ctx generic.CommandContext) {
-
+func (aliasFiltered AliasV1) execute(args []string) {
+	utils.Logger(utils.INFO, "Start v1")
 	sql := aliasFiltered.SQL
 	if len(aliasFiltered.Args) > 0 {
 		for index := 0; index < len(aliasFiltered.Args); index++ {
-			sql = strings.ReplaceAll(sql, aliasFiltered.Args[index], ctx.Args[index])
+			sql = strings.ReplaceAll(sql, aliasFiltered.Args[index], args[index])
 		}
 	}
 
 	aliasToTable := database.FindTablesWithAliases(sql)
 	tables := []string{}
 	collections.Map(func(touple collections.Touple) any { return touple.Value }, aliasToTable, &tables)
-
-	k8sInfo := k8s.K8sInfo{PathK8sConfig: *ctx.Flags[commons.CTE_KUBECONFIG], NamespaceDefault: *ctx.Flags[commons.CTE_NS]}
-	mapObjects := k8s.GenerateMapObjects(k8sInfo)
+	k8sInfo := k8s.K8sInfo{}
+	mapObjects := k8s.GenerateMapObjects()
 	k8sInfo.K8sResources = mapObjects
 
 	sqlSelect := database.ManipulateAST(sql, aliasToTable)
@@ -76,9 +75,10 @@ func (aliasFiltered AliasV1) execute(ctx generic.CommandContext) {
 	}
 	rows := dbObjetc.EvaluateSelect(sqlSelect)
 	output.PrintStdout(rows)
+	utils.Logger(utils.INFO, "End v1")
 }
 
-func (alias AliasDefV1) GenerateDoc(ctx generic.CommandContext) []*cobra.Command {
+func (alias AliasDefV1) GenerateDoc() []*cobra.Command {
 
 	result := []*cobra.Command{}
 
@@ -105,8 +105,7 @@ func (alias AliasDefV1) GenerateDoc(ctx generic.CommandContext) []*cobra.Command
 				if !okAlias {
 					commons.ErrorKubeAliasNotFoud.BuildMsgError(name).KO()
 				}
-				ctx.Args = args
-				aliasFiltered.execute(ctx)
+				aliasFiltered.execute(args)
 			},
 		}
 		result = append(result, subCmd)

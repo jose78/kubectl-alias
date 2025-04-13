@@ -24,12 +24,14 @@ package database
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 
 	"github.com/jose78/kubectl-alias/commons"
+	"github.com/jose78/kubectl-alias/internal/utils"
 	_ "github.com/mattn/go-sqlite3"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
@@ -78,7 +80,7 @@ func (conf dbConf) EvaluateSelect(sqlSelect string) SelectResult {
 
 // CReate table
 func (conf dbConf) CreateTable(table string) {
-
+	utils.Logger(utils.INFO, "Create table " + table)
 	data := `CREATE TABLE %s (
         id INTEGER PRIMARY KEY,
         %s TEXT NOT NULL
@@ -87,27 +89,30 @@ func (conf dbConf) CreateTable(table string) {
 	createTable := fmt.Sprintf(data, table, table)
 	statement, err := conf.db.Prepare(createTable)
 	if err != nil {
-		commons.ErrorDBCreateTable.BuildMsgError(table, err)
+		commons.ErrorDBCreateTable.BuildMsgError(table, err).KO()
 	}
 	statement.Exec()
 }
 
 // Insert list of items of same type in a table
-func (conf dbConf) Insert(k8sValues []unstructured.Unstructured, tbl string) {
-
+func (conf dbConf) Insert(k8sValues []unstructured.Unstructured, table string) {
+	elements := "elements"
+	if len(k8sValues) == 1 {
+		elements = "element"
+	}
+	utils.Logger(utils.INFO, fmt.Sprintf( "Insert %d %s in table %s" ,  len(k8sValues), elements ,table))
 	for _, value := range k8sValues {
 
 		valueJson, _ := json.Marshal(value)
-		valueStr := fmt.Sprintf("INSERT INTO %s(%s) VALUES('%s');", tbl, tbl, string(valueJson))
+		valueStr := fmt.Sprintf("INSERT INTO %s(%s) VALUES('%s');", table, table, string(valueJson))
 		statement, err := conf.db.Prepare(valueStr) // Prepare statement.
 		// This is good to avoid SQL injections
 		if err != nil {
-			commons.ErrorDBInsertPrepare.BuildMsgError(tbl, err)
+			commons.ErrorDBInsertPrepare.BuildMsgError(table, err).KO()
 		}
 		_, err = statement.Exec()
 		if err != nil {
-			commons.ErrorDBRunningInsert.BuildMsgError(tbl, err)
-
+			commons.ErrorDBRunningInsert.BuildMsgError(table, err).KO()
 		}
 	}
 }
@@ -131,20 +136,33 @@ type DbConf interface {
 func getDbFaile() string {
 	kubeAliasPaths := os.Getenv(commons.ENV_VAR_KUBEALIAS_NAME)
 	path := path.Dir(kubeAliasPaths)
-	path = filepath.Join(path, "sqlite-database.db") 
+	path = filepath.Join(path, "sqlite-database.db")
 	return path
 }
 
+
+func checkDbFile(path string) {
+	if _ , err := os.Stat(path); err == nil  {
+		utils.Logger(utils.INFO, fmt.Sprintf("located the db file exist %s" ,  path))
+	} else if  errors.Is(err, os.ErrNotExist) {
+			// path/to/whatever does *not* exist
+		utils.Logger(utils.WARN, fmt.Sprintf("the db file not exist %s: %v" ,  path, err))
+	} else {
+		utils.Logger(utils.WARN, fmt.Sprintf("generic error checking the file %s: %v" ,  path, err))
+	}
+}
+
 func Load() DbConf {
+	utils.Logger(utils.INFO, "Load db")
 	path := getDbFaile()
-	os.Remove( path) // I delete the file to avoid duplicated records.
-	// SQLite is a file based database.
 
 	file, errCReateDbObj := os.Create(path) // Create SQLite file
 	if errCReateDbObj != nil {
 		commons.ErrorDbNotCreaterd.BuildMsgError(errCReateDbObj).KO()
 	}
 	file.Close()
+
+	checkDbFile(path)
 
 	sqliteDatabase, errOpeningDB := sql.Open("sqlite3", path) // Open the created SQLite File
 	if errOpeningDB != nil {
@@ -157,4 +175,5 @@ func Load() DbConf {
 func (conf dbConf) Destroy() {
 	conf.db.Close()
 	os.Remove(getDbFaile())
+	utils.Logger(utils.INFO, "removed database file: " +  getDbFaile())
 }
