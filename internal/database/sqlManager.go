@@ -143,7 +143,7 @@ func getDbFaile() string {
 
 func checkDbFile(path string) {
 	if _ , err := os.Stat(path); err == nil  {
-		utils.Logger(utils.WARN, fmt.Sprintf("the db file not exist %s: %v" ,  path, err))
+		utils.Logger(utils.INFO, fmt.Sprintf("located the db file exist %s" ,  path))
 	} else if  errors.Is(err, os.ErrNotExist) {
 			// path/to/whatever does *not* exist
 		utils.Logger(utils.WARN, fmt.Sprintf("the db file not exist %s: %v" ,  path, err))

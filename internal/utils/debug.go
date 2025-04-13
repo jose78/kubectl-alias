@@ -24,8 +24,6 @@ package utils
 
 import (
 	"fmt"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 type DebugMode int
@@ -51,7 +49,7 @@ var (
 	reset   = "\033[0m"
 	red     = "\033[31m"
 	yellow  = "\033[33m"
-	green = "\033[32m"
+	green   = "\033[32m"
 )
 
 func (mode DebugMode) print() string {
@@ -79,8 +77,9 @@ func (mode DebugMode) print() string {
 //	Logger(LOG, "Service started")
 //	Logger(ERROR, "Failed to connect to DB")
 func Logger(mode DebugMode, msg string) {
-	if !Verbose {
+	if !Verbose && mode  != ERROR {
+		fmt.Println(Verbose)
 		return
 	}
-	fmt.Printf(" %s %s\n", mode.print(),  cases.Title(language.Und, cases.NoLower).String( msg )) 
+	fmt.Printf(" %s %s\n", mode.print(), msg)
 }
