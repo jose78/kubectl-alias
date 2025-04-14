@@ -22,7 +22,6 @@ THE SOFTWARE.
 package alias
 
 import (
-	"fmt"
 	"os"
 	"strings"
 
