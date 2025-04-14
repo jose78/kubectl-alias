@@ -7,6 +7,19 @@
 
 # kubectl-alias <img align="right" width="80" height="100" src="resources/kubectl-alias-logo.png" alt="Kubectl-alias">
 
+> ⚠️ **Compatibility Notice:**
+>
+> This application originally used the [`github.com/mattn/go-sqlite3`](https://github.com/mattn/go-sqlite3) package for SQLite database access. However, that library requires `CGO` to be enabled during compilation.
+>
+> This caused issues when building with `CGO_ENABLED=0`, such as the following error:
+>
+> ```
+> Binary was compiled with 'CGO_ENABLED=0', go-sqlite3 requires cgo to work. This is a stub.
+> ```
+>
+> To remove the dependency on C and make cross-platform/static builds easier (e.g., for Windows or Docker deployments), the package has been replaced with [`modernc.org/sqlite`](https://pkg.go.dev/modernc.org/sqlite), a pure-Go alternative that works with `CGO_ENABLED=0`.
+>
+> This change enables the generation of fully static and portable binaries without requiring an external C toolchain.
 
 
 ## Description
