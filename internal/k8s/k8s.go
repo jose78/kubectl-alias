@@ -237,9 +237,9 @@ type K8sInfo struct {
 func GenerateMapObjects() map[string]defaultResource {
 	pathK8s := retrieveKubeConf()
 
-	printExecutionContextFromKubeconfig(pathK8s)
 	conf := createConfiguration(pathK8s)
 	checkConnectivity(conf)
+	printExecutionContextFromKubeconfig(pathK8s)
 	clientConfig := conf.clientConf
 
 	//Retrieve the list of apiResources

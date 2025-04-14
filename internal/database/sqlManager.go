@@ -32,7 +32,8 @@ import (
 
 	"github.com/jose78/kubectl-alias/commons"
 	"github.com/jose78/kubectl-alias/internal/utils"
-	_ "github.com/mattn/go-sqlite3"
+	//_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 )
 
@@ -164,7 +165,7 @@ func Load() DbConf {
 
 	checkDbFile(path)
 
-	sqliteDatabase, errOpeningDB := sql.Open("sqlite3", path) // Open the created SQLite File
+	sqliteDatabase, errOpeningDB := sql.Open("sqlite", path) // Open the created SQLite File
 	if errOpeningDB != nil {
 		commons.ErrorDbOpening.BuildMsgError(errOpeningDB).KO()
 	}
