@@ -141,6 +141,5 @@ func (k8s errorManager) BuildMsgError(params ...any) ErrorSystem {
 
 func (err ErrorSystem) KO() {
 	utils.Logger(utils.ERROR, err.errorMsg)
-	fmt.Println("PEPEPEP")
 	os.Exit(err.errorCode)
 }

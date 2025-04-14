@@ -78,7 +78,6 @@ func (mode DebugMode) print() string {
 //	Logger(ERROR, "Failed to connect to DB")
 func Logger(mode DebugMode, msg string) {
 	if !Verbose && mode  != ERROR {
-		fmt.Println(Verbose)
 		return
 	}
 	fmt.Printf(" %s %s\n", mode.print(), msg)

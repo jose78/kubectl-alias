@@ -60,7 +60,6 @@ func LoadKubeAlias() map[string]any {
 	if kubepath == "" {
 		commons.ErrorKubeAliasPathNotDefined.BuildMsgError().KO()
 	}
-	fmt.Println("LoadKubeAlias 1")
 	aliasByteConent, errReadingKubeAliasContent := os.ReadFile(kubepath)
 	if errReadingKubeAliasContent != nil {
 		commons.ErrorKubeAliasReadingFile.BuildMsgError(kubepath, errReadingKubeAliasContent).KO()
@@ -71,6 +70,5 @@ func LoadKubeAlias() map[string]any {
 	if errParsingKubeAliasContent != nil {
 		commons.ErrorKubeAliasParseFile.BuildMsgError(kubepath, errParsingKubeAliasContent).KO()
 	}
-	fmt.Println("LoadKubeAlias 2")
 	return result
 }
