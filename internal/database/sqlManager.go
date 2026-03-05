@@ -113,6 +113,7 @@ func (conf dbConf) Insert(k8sValues []unstructured.Unstructured, table string) {
 		}
 		_, err = statement.Exec()
 		if err != nil {
+			utils.Logger(utils.WARN, fmt.Sprintf("Insert: %s" ,  valueStr))
 			commons.ErrorDBRunningInsert.BuildMsgError(table, err).KO()
 		}
 	}
