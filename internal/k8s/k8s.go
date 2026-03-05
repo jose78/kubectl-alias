@@ -276,6 +276,7 @@ func GenerateMapObjects() map[string]defaultResource {
 			result[resource.SingularName] = defaultResource
 			result[resource.Name] = defaultResource
 			result[resource.Kind] = defaultResource
+			utils.Logger(utils.INFO, fmt.Sprintf("Generate resource for: %s, %s, %s", resource.SingularName, resource.Name, resource.Kind))
 		}
 	}
 	utils.Logger(utils.INFO, "generated map object from k8s cluster")
