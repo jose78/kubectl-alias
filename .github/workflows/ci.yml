@@ -1,0 +1,27 @@
+name: CI
+
+on:
+  pull_request:
+    branches:
+      - main
+      - master
+
+jobs:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'  # Adjust if necessary
+
+      - name: Install dependencies
+        run: make deps
+
+      - name: Run tests
+        run: make test
