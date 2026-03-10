@@ -105,13 +105,13 @@ func (conf dbConf) Insert(k8sValues []unstructured.Unstructured, table string) {
 	for _, value := range k8sValues {
 
 		valueJson, _ := json.Marshal(value)
-		valueStr := fmt.Sprintf("INSERT INTO %s(%s) VALUES('%s');", table, table, string(valueJson))
-		statement, err := conf.db.Prepare(valueStr) // Prepare statement.
+		insertSQL := fmt.Sprintf("INSERT INTO %s(%s) VALUES(?);", table, table)
+		statement, err := conf.db.Prepare(insertSQL) // Prepare statement.
 		// This is good to avoid SQL injections
 		if err != nil {
 			commons.ErrorDBInsertPrepare.BuildMsgError(table, err).KO()
 		}
-		_, err = statement.Exec()
+		_, err = statement.Exec(string(valueJson))
 		if err != nil {
 			utils.Logger(utils.WARN, fmt.Sprintf("Insert: %s" ,  valueStr))
 			commons.ErrorDBRunningInsert.BuildMsgError(table, err).KO()
